@@ -621,6 +621,19 @@ npm run build
 
 ---
 
+## Publishing (maintainers — CI token)
+
+Publishing uses a **Granular Access Token** and GitHub Actions so you don’t need `npm publish --otp` on your laptop:
+
+1. On [npmjs.com → Access Tokens](https://www.npmjs.com/settings/~/tokens): **Generate New Token** → **Granular Access Token**.
+2. Under packages, select **`@vahidkaargar/customized-api-client`** with **Read and write** (and **Automations** / **Bypass two-factor authentication** if npm shows that option for unattended publish — required when your account enforces 2FA on writes).
+3. In this GitHub repo: **Settings** → **Secrets and variables** → **Actions** → create **`NPM_TOKEN`** with that token value.
+4. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow**.
+
+That workflow repeats the CI gate, then runs **`npm publish`** ( **`publishConfig.access`** is **`public`** for this scope).
+
+---
+
 ## License
 
 MIT

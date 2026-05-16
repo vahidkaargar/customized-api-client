@@ -66,5 +66,8 @@
   "bugs": {
     "url": "https://github.com/vahidkaargar/customized-api-client/issues"
   },
-  "homepage": "https://github.com/vahidkaargar/customized-api-client#readme"
+  "homepage": "https://github.com/vahidkaargar/customized-api-client#readme",
+  "publishConfig": {
+    "access": "public"
+  }
 }
