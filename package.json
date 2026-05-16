@@ -1,0 +1,61 @@
+{
+  "name": "@vahidkaargar/customized-api-client",
+  "version": "0.1.0",
+  "description": "TypeScript Axios client for JSON:API v1.1 with idempotency, retries, and normalized results",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --dts --format esm,cjs --clean --sourcemap",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "openapi:generate": "npx openapi-typescript \"${OPENAPI_PATH:-.cursor/api-documentations/openapi/v1.yaml}\" -o src/generated/openapi.ts"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "ulid": "^2.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "msw": "^2.7.0",
+    "openapi-typescript": "^7.4.4",
+    "prettier": "^3.4.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "jsonapi",
+    "axios",
+    "typescript",
+    "api-client"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+graphify-out/cache/
+graphify-out/.graphify_*
+graphify-out/manifest.json
+*.tgz
+.env
+.env.*
+!.env.example
+.DS_Store

@@ -1,0 +1,111 @@
+openapi: 3.0.3
+
+info:
+  title: Mobogift System and health endpoints
+  description: |
+    Routes outside the versioned `/api/v1` contract. The aggregate
+    framework health check (`GET /up`) is documented here. See also
+    `openapi/v1.yaml` for the public API surface validated by Spectator.
+
+    Liveness and readiness probes (`/health/live`, `/health/ready`) are
+    specified canonically in `openapi/v1.yaml` at `/api/v1/health/...`.
+    Permanent root aliases (`/health/live`, `/health/ready`) remain
+    available for ops bookmarks and legacy orchestrator probes but are
+    not contract-validated here (they share the same controllers).
+  version: 1.0.0
+
+servers:
+  - url: /
+    description: Application root (no /api/v1 prefix)
+
+tags:
+  - name: System
+    description: Process and dependency health outside the public API version prefix.
+
+paths:
+  /up:
+    get:
+      summary: Aggregate health check
+      description: |
+        Returns JSON:API `health_check` with dependency checks (database, cache).
+        Registered at the application root, not under `/api/v1`.
+      tags: [System]
+      responses:
+        '200':
+          description: Application is healthy or degraded.
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [type, id, attributes]
+                    properties:
+                      type:
+                        type: string
+                        example: health_check
+                      id:
+                        type: string
+                        example: system
+                      attributes:
+                        type: object
+                        required: [status, checks]
+                        properties:
+                          status:
+                            type: string
+                            enum: [healthy, degraded]
+                          checks:
+                            type: object
+                            properties:
+                              database:
+                                type: boolean
+                              cache:
+                                type: boolean
+              examples:
+                healthy:
+                  summary: All checks passing
+                  value:
+                    data:
+                      type: health_check
+                      id: system
+                      attributes:
+                        status: healthy
+                        checks:
+                          database: true
+                          cache: true
+        '503':
+          description: Service unavailable.
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorEnvelope'
+
+components:
+  schemas:
+    JsonApiErrorEnvelope:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [status, title, detail]
+            properties:
+              status:
+                type: string
+                example: '503'
+              code:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
