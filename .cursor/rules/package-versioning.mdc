@@ -1,0 +1,36 @@
+---
+description: SemVer bumps, lockfile parity, Publish workflow prerequisites
+globs:
+  - package.json
+  - package-lock.json
+  - ".github/workflows/publish*.yml"
+alwaysApply: false
+---
+
+# Package versioning (npm releases)
+
+Release discipline for this library’s **`name`** / **`version`** in [`package.json`](../../package.json) only—no scope hard-coded beyond what ships in that file.
+
+## Before running **Publish to npm**
+
+- **`package.json`** `version` must **not** already exist on the npm registry under that **`name`** (same semver cannot be overwritten).
+- The **[`publish-npm.yml`](../../.github/workflows/publish-npm.yml)** workflow runs an early **`npm view "${name}@${version}"`** check and **fails before tests/build** when that tarball is already published. **Fix by bumping the version**, not by weakening the guard.
+
+## Keeping files in sync
+
+- When you bump `version`, keep the root **`package-lock.json`** `version` field aligned (e.g. `npm version patch|minor|major` on a clean tree, or edit both explicitly and run **`npm install`** if the lockfile needs refresh).
+
+## SemVer guidance
+
+- **patch** — bug fixes, backward compatible.
+- **minor** — new backward-compatible APIs or behaviors.
+- **major** — breaking changes to documented public behavior or typings.
+
+## Git flow
+
+1. Bump version, commit, merge into **`main`**.
+2. **Actions** → **Publish to npm** (**`workflow_dispatch`**) runs [`publish-npm.yml`](../../.github/workflows/publish-npm.yml).
+
+## Scope note (tracked package shape)
+
+Publishing stays **generic JSON:API client** tooling only—follow **[`package-scope-no-openapi.mdc`](./package-scope-no-openapi.mdc)** for OpenAPI/codegen limits in this repo.

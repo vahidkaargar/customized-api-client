@@ -13,6 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fail if version already published on npm
+        run: |
+          set -euo pipefail
+          PKG=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Checking npm registry for ${PKG}@${VERSION} ..."
+          if npm view "${PKG}@${VERSION}" version --silent >/dev/null 2>&1; then
+            echo "::error title=Version already on npm::${PKG}@${VERSION} is already published. Bump version in package.json and package-lock.json, merge to main, then re-run Publish to npm."
+            exit 1
+          fi
+          echo "Ok: ${VERSION} not found on npm; continuing publish pipeline."
+
       - uses: actions/setup-node@v4
         with:
           # Match CI: avoid runner Node 22.22.x toolcache + broken npm self-upgrade.

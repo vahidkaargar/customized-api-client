@@ -644,6 +644,7 @@ CI uses **`node-version: '22.21'`** in **[`ci.yml`](.github/workflows/ci.yml)** 
 
 1. On [npmjs.com](https://www.npmjs.com/) → package **Access** / **Publishing** settings: enable **Trusted publishing** from **GitHub** for repository **`vahidkaargar/customized-api-client`**, selecting workflow **`.github/workflows/publish-npm.yml`** (exact filename as registered on npm).
 2. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow** ( **`workflow_dispatch`** ).
+3. **`publish-npm.yml`** exits early if **`package.json`** `version` is already on npm so you avoid a long failed run (**fail-fast before** tests and build).
 
 Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gates as **[`ci.yml`](.github/workflows/ci.yml)** (Node **`22.21`**, global **npm** **`^11.5.1`**) and then **`npm publish --provenance`**.
 
