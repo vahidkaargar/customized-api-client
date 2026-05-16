@@ -108,5 +108,3 @@ export { applyTransformKeys } from './helpers/transform-keys.ts';
 
 export { pollAsyncResult } from './poll-async.ts';
 export type { PollOptions } from './poll-async.ts';
-
-export type { paths, operations, components } from './generated/openapi.ts';

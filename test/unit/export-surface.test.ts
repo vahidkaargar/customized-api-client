@@ -62,4 +62,10 @@ describe('public export surface', () => {
     expect(typeof api.createApiClient).toBe('function');
     expect(typeof api.PACKAGE_VERSION).toBe('string');
   });
+
+  it('does not export OpenAPI codegen symbols', () => {
+    expect('paths' in api).toBe(false);
+    expect('operations' in api).toBe(false);
+    expect('components' in api).toBe(false);
+  });
 });

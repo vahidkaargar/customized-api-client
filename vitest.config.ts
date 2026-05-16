@@ -5,11 +5,12 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     include: ['test/**/*.test.ts'],
+    exclude: ['test/postbuild/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/generated/**', 'src/types/jsonapi.ts', 'src/types/results.ts'],
+      exclude: ['src/types/jsonapi.ts', 'src/types/results.ts'],
       thresholds: {
         statements: 100,
         branches: 100,

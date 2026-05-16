@@ -26,7 +26,7 @@ TypeScript **Axios** client for **JSON:API v1.1** APIs. It targets backends that
 16. [Guards and validation helpers](#guards-and-validation-helpers)
 17. [Security and logging](#security-and-logging)
 18. [Health checks](#health-checks)
-19. [OpenAPI-generated types](#openapi-generated-types)
+19. [Typing your API](#typing-your-api)
 20. [Advanced / low-level exports](#advanced--low-level-exports)
 21. [API reference (exports)](#api-reference-exports)
 
@@ -535,24 +535,27 @@ const ok = await ping(); // GET /health/live — true if no throw
 
 ---
 
-## OpenAPI-generated types
+## Typing your API
 
-The package re-exports codegen types from the bundled spec:
+This package exports **JSON:API primitives** (`JsonApiDocument`, `ClientSuccess`, helpers)—not endpoint-specific types tied to one backend.
+
+If you want OpenAPI-driven types:
+
+1. Keep the spec in your **backend** repo or a dedicated **`@myorg/api-types`** package.
+2. Run codegen there (for example [`openapi-typescript`](https://github.com/drwpow/openapi-typescript))—not in this client package.
+3. Pass generated types at call sites via generics:
 
 ```typescript
-import type { paths, operations, components } from '@vahidkaargar/customized-api-client';
+import { createApiClient } from '@vahidkaargar/customized-api-client';
+import type { operations } from '@myorg/api-types';
 
-type ListWidgets = operations['listWidgets'];
+const client = createApiClient({ baseURL: 'https://api.example.com/api/v1', getToken: async () => token });
+
+type MeResponse = operations['getMe']['responses'][200]['content']['application/vnd.api+json'];
+const me = await client.get<MeResponse>('/me');
 ```
 
-Types are generated from **`openapi/v1.yaml`** in this repository. Regenerate after spec changes (when developing the package):
-
-```bash
-npm run openapi:generate
-# OPENAPI_PATH=/path/to/v1.yaml npm run openapi:generate
-```
-
-Consumers use committed types in the published build; you do not need the YAML at runtime.
+You do not need an OpenAPI spec to use this client—string paths and manual types work fine.
 
 ---
 
@@ -603,10 +606,6 @@ For custom pipelines, tests, or wrappers:
 - Poll: `pollAsyncResult`
 - Health: `createHealthCheck`
 - Security: `redactHeaderRecord`, `truncateForLog`
-
-### OpenAPI
-
-- `paths`, `operations`, `components`
 
 ---
 
