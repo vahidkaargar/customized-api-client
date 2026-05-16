@@ -64,6 +64,9 @@ describe('coverage 100% gaps', () => {
       http.get('http://localhost/api/v1/implicit-get', () =>
         HttpResponse.json({ data: { type: 't', id: '1' } }, { status: 200 }),
       ),
+      http.get('http://localhost/api/v1/', () =>
+        HttpResponse.json({ data: { type: 't', id: '1' } }, { status: 200 }),
+      ),
       http.post('http://localhost/api/v1/lc-key', () =>
         HttpResponse.json({ data: { type: 't', id: '1' } }, { status: 200 }),
       ),
@@ -74,6 +77,7 @@ describe('coverage 100% gaps', () => {
     );
     await client.request({ method: 'GET', url: '/no-headers', headers: undefined });
     await client.request({ url: '/implicit-get' });
+    await client.request({ method: 'GET' });
     await client.request({
       method: 'POST',
       url: '/lc-key',
@@ -200,6 +204,11 @@ describe('coverage 100% helpers and parse', () => {
   it('parseMultiStatusBody wraps non-array object', () => {
     const items = parseMultiStatusBody({ foo: 1 });
     expect(items).toEqual([{ httpStatus: 500, body: { foo: 1 } }]);
+  });
+
+  it('parseMultiStatusBody ignores non-array items property', () => {
+    const items = parseMultiStatusBody({ items: 'not-an-array' });
+    expect(items).toEqual([{ httpStatus: 500, body: { items: 'not-an-array' } }]);
   });
 
   it('parseJsonApiErrorBody invalid Retry-After date string', () => {
@@ -467,18 +476,25 @@ describe('coverage 100% helpers and parse', () => {
   });
 
   it('normalizeHeaders idempotent-replayed True', async () => {
+    const onIdempotencyReplay = vi.fn();
     server.use(
       http.get('http://localhost/api/v1/true-replay', () =>
         HttpResponse.json(
           { data: { type: 't', id: '1' } },
-          { status: 200, headers: { 'Idempotent-Replayed': 'True' } },
+          { status: 200, headers: { 'Idempotent-Replayed': 'true' } },
         ),
       ),
     );
-    const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
+    const client = createApiClient({
+      baseURL: 'http://localhost/api/v1',
+      onIdempotencyReplay,
+    });
     const res = await client.get('/true-replay');
     if (res.kind === 'jsonapi-success') {
       expect(res.headers.idempotentReplayed).toBe(true);
     }
+    expect(onIdempotencyReplay).toHaveBeenCalledWith(
+      expect.objectContaining({ url: '/true-replay', method: 'get' }),
+    );
   });
 });
