@@ -1,0 +1,20 @@
+---
+description: Keeps npm package generic—no bundled OpenAPI spec or codegen
+globs:
+  - src/index.ts
+  - package.json
+  - "**/.github/**/*.yml"
+alwaysApply: true
+---
+
+# Package scope — no OpenAPI in this repo
+
+Hard limits for **`@vahidkaargar/customized-api-client`**:
+
+- Do **not** add: root **`openapi/`** with a tracked **`v1.yaml`**, **`src/generated/openapi.ts`**, **`openapi-typescript`** as a dependency, **`openapi:generate`** in **`package.json`**, CI jobs that regenerate OpenAPI into **`src/generated`**, or **`export type { paths`** / **`operations`** / **`components`** from **`src/index.ts`**.
+- Do **not** use **`OPENAPI_PATH`** as the driver for codegen **in this package** (consumers run codegen against their backend or a types package).
+- **`.cursor/api-documentations/openapi/*.yaml`** is an **optional local mirror** for agents; it can be stale and is **not** part of what ships on npm.
+
+Regression detection: **`test/unit/package-no-openapi.test.ts`**, **`test/postbuild/dist-no-openapi.test.ts`** (requires **`npm run build`** first; run via **`vitest.postbuild.config.ts`**).
+
+User-facing typings story: **`README.md`** — “Typing your API”.

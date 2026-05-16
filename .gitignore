@@ -3,8 +3,16 @@ dist/
 coverage/
 *.tgz
 
-# Agent / IDE / knowledge-graph (local only — not published)
-.cursor/
+# Agent / IDE / knowledge-graph — local-heavy paths stay ignored; version subsets below
+.cursor/*
+!.cursor/mcp.json
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/tasks/
+!.cursor/tasks/**
+
 .cursorrules
 AGENTS.md
 graphify-out/
