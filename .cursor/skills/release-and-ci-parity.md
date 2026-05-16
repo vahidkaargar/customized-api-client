@@ -1,6 +1,6 @@
 # Release gates — parity with CI
 
-Order matches **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** and should pass before tagging or publishing. CI runs on **Node.js 22** with global **npm** **`^11.5.1`** (install after `setup-node`; see workflow).
+Order matches **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** and should pass before tagging or publishing. CI uses **`node-version: '22.21'`** (not bare **`22`**) plus global **npm** **`^11.5.1`** after `setup-node` — **`22`** can land on runner **22.22.x** with a bundled npm/`npm install -g npm` regression ([actions/runner-images#13883](https://github.com/actions/runner-images/issues/13883)).
 
 ```bash
 npm install -g npm@^11.5.1

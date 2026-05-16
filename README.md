@@ -625,6 +625,8 @@ npm run build
 npx vitest run --config vitest.postbuild.config.ts
 ```
 
+CI uses **`node-version: '22.21'`** in **[`ci.yml`](.github/workflows/ci.yml)** plus global **npm** **`^11.5.1`**, pinned that way because bare **`22`** can resolve to **22.22.x** with a bundled npm regression that breaks **`npm install -g npm`** on GitHub-hosted runners ([runner-images discussion](https://github.com/actions/runner-images/issues/13883)).
+
 ---
 
 ## Supply chain
@@ -643,7 +645,7 @@ npx vitest run --config vitest.postbuild.config.ts
 1. On [npmjs.com](https://www.npmjs.com/) → package **Access** / **Publishing** settings: enable **Trusted publishing** from **GitHub** for repository **`vahidkaargar/customized-api-client`**, selecting workflow **`.github/workflows/publish-npm.yml`** (exact filename as registered on npm).
 2. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow** ( **`workflow_dispatch`** ).
 
-Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gates as **[`ci.yml`](.github/workflows/ci.yml)** (Node **22**, global **npm** **`^11.5.1`**) and then **`npm publish --provenance`**.
+Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gates as **[`ci.yml`](.github/workflows/ci.yml)** (Node **`22.21`**, global **npm** **`^11.5.1`**) and then **`npm publish --provenance`**.
 
 **Legacy (token publish):** If Trusted Publishing cannot be configured, restore a publish step env block with **`NODE_AUTH_TOKEN`** from a granular npm token (**Read and write** for this package; **Automation / bypass 2FA** if your npm account requires it for unattended publish). Prefer OIDC for supply-chain hygiene once enabled.
 

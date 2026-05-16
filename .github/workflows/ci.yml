@@ -12,7 +12,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # Exclude 22.22.2-hostedtoolcache regressions breaking `npm install -g npm`:
+          # https://github.com/actions/runner-images/issues/13883
+          node-version: '22.21'
           cache: npm
       - run: npm install -g npm@^11.5.1
       - run: npm ci

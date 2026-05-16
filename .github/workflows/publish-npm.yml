@@ -15,7 +15,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # Match CI: avoid runner Node 22.22.x toolcache + broken npm self-upgrade.
+          node-version: '22.21'
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm install -g npm@^11.5.1
