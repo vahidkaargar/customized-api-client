@@ -6,6 +6,12 @@ import {
 } from '../../src/index.ts';
 
 describe('query builders', () => {
+  it('buildJsonApiQuery without filter', () => {
+    const q = buildJsonApiQuery({ sort: ['name'] });
+    expect(q.sort).toBe('name');
+    expect(Object.keys(q).filter((k) => k.startsWith('filter['))).toHaveLength(0);
+  });
+
   it('buildJsonApiQuery', () => {
     const q = buildJsonApiQuery({
       filter: { status: 'open', n: 1 },

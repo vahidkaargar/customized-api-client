@@ -24,4 +24,8 @@ describe('readResourceVersion', () => {
   it('undefined when absent', () => {
     expect(readResourceVersion({ type: 't', id: '1' }, undefined)).toBeUndefined();
   });
+
+  it('ignores ETag without v=<digits>', () => {
+    expect(readResourceVersion({ type: 't', id: '1' }, 'W/"opaque"')).toBeUndefined();
+  });
 });

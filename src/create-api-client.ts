@@ -173,9 +173,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       const flat = flattenAxiosHeaders(res.headers);
       if (flat['idempotent-replayed'] === 'true' && config.onIdempotencyReplay) {
         config.onIdempotencyReplay({
-          /* v8 ignore next 2 -- config url/method are strings from axios */
+          /* v8 ignore start -- @preserve axios config url/method are strings */
           url: typeof res.config.url === 'string' ? res.config.url : undefined,
           method: typeof res.config.method === 'string' ? res.config.method : undefined,
+          /* v8 ignore stop -- @preserve */
         });
       }
       const dep = parseDeprecationHeaders(res.headers);
@@ -272,11 +273,11 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       return perform('DELETE', resolvePath(path), opts ?? {});
     },
     async request(ax: AxiosRequestConfig, opts?: RequestCallOptions): Promise<ClientSuccess> {
-      /* v8 ignore next 2 -- method/url defaults match axios when omitted */
+      /* v8 ignore next 2 -- @preserve method/url defaults match axios when omitted */
       const method = (ax.method ?? 'GET').toUpperCase();
       const rawUrl = ax.url ?? '/';
       const u =
-        /* v8 ignore next -- axios types url as string; non-string is defensive */
+        /* v8 ignore next -- @preserve axios types url as string; non-string is defensive */
         typeof rawUrl === 'string' && /^https?:\/\//i.test(rawUrl)
           ? rawUrl
           : resolvePath(rawUrl);
