@@ -1,37 +1,26 @@
 # `@vahidkaargar/customized-api-client`
 
-TypeScript **Axios** client for **JSON:API v1.1** APIs. It targets backends that use `application/vnd.api+json`, **Bearer** auth, mandatory **`Idempotency-Key`** on mutations, optimistic concurrency via **`If-Match`**, explicit **retry** rules, and **normalized** success/error results so application code does not re-parse raw Axios responses.
+TypeScript **Axios** client for **JSON:API v1.1** APIs — Bearer auth, mandatory mutation idempotency, optimistic concurrency, retries, and **typed success/error results** so you rarely touch raw Axios responses.
 
-**Requirements:** Node.js **≥ 20**. **ESM** and **CJS** builds are published (`import` / `require`).
+| | |
+|---|---|
+| **Node** | ≥ 20 |
+| **Modules** | ESM + CJS |
+| **Changelog** | [CHANGELOG.md](./CHANGELOG.md) |
+| **License** | MIT |
 
 ---
 
-## Table of contents
+## What you get
 
-1. [Install](#install)
-2. [Quick start](#quick-start)
-3. [Configuration](#configuration)
-4. [Base URL modes](#base-url-modes)
-5. [Making requests](#making-requests)
-6. [Success results (`ClientSuccess`)](#success-results-clientsuccess)
-7. [Errors](#errors)
-8. [Idempotency](#idempotency)
-9. [Optimistic concurrency](#optimistic-concurrency)
-10. [Retries](#retries)
-11. [Pagination and query parameters](#pagination-and-query-parameters)
-12. [Included resources](#included-resources)
-13. [Async jobs (202) and polling](#async-jobs-202-and-polling)
-14. [Bulk operations (207)](#bulk-operations-207)
-15. [Response key transformation](#response-key-transformation)
-16. [Guards and validation helpers](#guards-and-validation-helpers)
-17. [Security and logging](#security-and-logging)
-18. [Health checks](#health-checks)
-19. [Typing your API](#typing-your-api)
-20. [Advanced / low-level exports](#advanced--low-level-exports)
-21. [API reference (exports)](#api-reference-exports)
-22. [Development](#development-this-repository)
-23. [Supply chain](#supply-chain)
-24. [Publishing](#publishing-maintainers)
+- **JSON:API headers** — `Content-Type` / `Accept: application/vnd.api+json` on requests
+- **Normalized responses** — narrow on `res.kind` (`jsonapi-success`, `no-content`, `accepted`, `multi-status`)
+- **Errors** — `ApiClientError` with `status`, `primaryCode`, `errors[]`, safe `toJSON()` for logs
+- **Idempotency** — `Idempotency-Key` on POST/PATCH/PUT/DELETE (ULID by default)
+- **Concurrency** — `If-Match: "v=<n>"` via `patchWithVersion` or `ifMatchVersion`
+- **Retries** — explicit policy (safe GET/HEAD vs mutations); honors `Retry-After`
+- **Two ergonomics** — throwing verbs **or** `safe*` methods returning `{ ok, value \| error }`
+- **Cancellation** — optional `AbortSignal` per request
 
 ---
 
@@ -49,13 +38,10 @@ import { createApiClient } from '@vahidkaargar/customized-api-client';
 
 ## Quick start
 
+**1. Create a client** (Mode B: `baseURL` already includes `/api/v1`):
+
 ```typescript
-import {
-  createApiClient,
-  ApiClientError,
-  getNextPageUrl,
-  readResourceVersion,
-} from '@vahidkaargar/customized-api-client';
+import { createApiClient, ApiClientError } from '@vahidkaargar/customized-api-client';
 
 const client = createApiClient({
   baseURL: 'https://api.example.com/api/v1',
@@ -64,13 +50,15 @@ const client = createApiClient({
     getToken: async () => sessionStorage.getItem('access_token'),
   },
 });
+```
 
+**2. Call the API** (default: throws `ApiClientError` on HTTP errors):
+
+```typescript
 try {
   const res = await client.get('/widgets');
   if (res.kind === 'jsonapi-success') {
-    const doc = res.document;
-    const next = getNextPageUrl(doc.links);
-    // ...
+    console.log(res.document.data);
   }
 } catch (e) {
   if (e instanceof ApiClientError) {
@@ -80,206 +68,90 @@ try {
 }
 ```
 
----
-
-## Configuration
-
-Pass a single config object to `createApiClient`:
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `baseURL` | `string` | **required** | API origin; see [Base URL modes](#base-url-modes). |
-| `baseUrlMode` | `'modeB' \| 'modeA'` | `'modeB'` | How relative paths are joined with `baseURL`. |
-| `auth` | `AuthConfig` | — | Bearer token or partner secret provider. |
-| `getAcceptLanguage` | `() => string \| null \| …` | — | Sets `Accept-Language` when returned value is non-empty. |
-| `defaultHeaders` | `Record<string, string>` | — | Merged into every request (after JSON:API defaults). |
-| `timeout` | `number` | `30000` | Axios timeout in ms. |
-| `signal` | `AbortSignal` | — | Pass per-request `AbortSignal` on `RequestCallOptions` for cancellation. |
-| `retry` | `RetryOptions` | see [Retries](#retries) | Bounded retry with backoff. |
-| `generateIdempotencyKey` | `() => string` | ULID | Custom idempotency key factory for mutations. |
-| `onIdempotencyReplay` | `(ctx) => void` | — | Called when response has `Idempotent-Replayed: true`. |
-| `onUnauthorized` | `(error) => void \| Promise<void>` | — | Called when a response normalizes to **401**. |
-| `onDeprecated` | `(info) => void` | — | Called when deprecation/sunset headers are present. |
-| `transformResponseKeys` | `'none' \| 'camelCase-attributes-meta'` | `'none'` | Optional camelCase on `attributes` / `meta` only. |
-| `maxBodyLogLength` | `number` | — | Documented cap for logging; use `truncateForLog` in app code. |
-
-### Authentication
-
-User and partner credentials both use **`Authorization: Bearer …`** (no extra partner headers).
-
-```typescript
-// User session token
-auth: { type: 'bearer', getToken: () => getAccessToken() }
-
-// Partner integration (same header shape)
-auth: { type: 'partner-bearer', getSecret: () => process.env.PARTNER_SECRET }
-```
-
-If the provider returns `null` / `undefined`, no `Authorization` header is sent.
+**3. Prefer no `try/catch` for expected errors?** Use `safe*` — see [Error handling](#error-handling).
 
 ---
 
-## Base URL modes
+## Guide for application developers
 
-### Mode B (default)
+### Pick a base URL mode
 
-`baseURL` **includes** `/api/v1`. Resource paths are short:
+| Mode | `baseURL` example | Path you pass | Result |
+|------|-------------------|---------------|--------|
+| **B** (default) | `https://api.example.com/api/v1` | `/widgets` | `…/api/v1/widgets` |
+| **A** | `https://api.example.com` + `baseUrlMode: 'modeA'` | `/widgets` | `…/api/v1/widgets` |
 
-```typescript
-createApiClient({ baseURL: 'https://api.example.com/api/v1' });
-await client.get('/admin/teams'); // → https://api.example.com/api/v1/admin/teams
-```
+Duplicate `/api/v1` in path + base is stripped automatically in Mode B.
 
-If a path accidentally repeats `/api/v1` while `baseURL` already ends with `/api/v1`, the client strips the duplicate segment.
+**Absolute URLs:** `getByUrl(links.next)` or `request({ url: 'https://…' })` — still get auth, JSON:API headers, and retries.
 
-### Mode A
+### Pick error handling
 
-`baseURL` is **origin only**; the client prefixes `/api/v1` for relative paths that do not already start with it:
+| Style | When to use | Example |
+|-------|-------------|---------|
+| **Throwing** (`get`, `post`, …) | Happy path + rare errors; familiar Axios flow | `try { await client.get(…) } catch (e) { … }` |
+| **Safe** (`safeGet`, `safePost`, …) | Branch on status without `try/catch` | `const r = await client.safeGet(…); if (!r.ok) …` |
 
-```typescript
-createApiClient({
-  baseURL: 'https://api.example.com',
-  baseUrlMode: 'modeA',
-});
-await client.get('/teams'); // → https://api.example.com/api/v1/teams
-```
+Every throwing method has a `safe*` twin, including `safeGetByUrl` and `safePatchWithVersion`.
 
-### Absolute URLs
+Non-`ApiClientError` failures (bugs, abort, network quirks) still **throw** from `safe*`.
 
-`getByUrl(fullUrl)` and `request({ url: 'https://…' })` use the URL as-is (still through interceptors: auth, JSON:API headers, retries).
-
----
-
-## Making requests
-
-### Verb methods (throw on error)
-
-| Method | HTTP | Notes |
-|--------|------|--------|
-| `get(path, opts?)` | GET | |
-| `head(path, opts?)` | HEAD | Often `no-content` (204). |
-| `post(path, data?, opts?)` | POST | Sends idempotency key. |
-| `patch(path, data?, opts?)` | PATCH | Sends idempotency key. |
-| `put(path, data?, opts?)` | PUT | Sends idempotency key. |
-| `delete(path, opts?)` | DELETE | Sends idempotency key. |
-| `patchWithVersion(path, data, version, opts?)` | PATCH | Sets `If-Match: "v=<version>"`. |
-| `getByUrl(fullUrl, opts?)` | GET | Follow `links.next` or external URLs. |
-| `request(axConfig, opts?)` | any | Escape hatch; merges `opts` with Axios config. |
-
-Per-call options (`RequestCallOptions`):
+### Per-request options
 
 ```typescript
 const controller = new AbortController();
-await client.post('/widgets', body, {
-  idempotencyKey: 'my-stable-key', // max 64 chars
-  ifMatchVersion: 3,
-  signal: controller.signal, // optional cancellation
+
+await client.patch('/widgets/42', body, {
+  idempotencyKey: 'stable-key-for-this-action', // optional; max 64 chars
+  ifMatchVersion: 7,                            // sets If-Match: "v=7"
+  signal: controller.signal,                    // cancel with controller.abort()
 });
-// Later: controller.abort();
-```
-
-### Safe variants (no throw on `ApiClientError`)
-
-Return `Result<ClientSuccess, ApiClientError>`: `{ ok: true, value }` or `{ ok: false, error }`.
-
-- `safeGet`, `safeHead`, `safePost`, `safePatch`, `safePut`, `safeDelete`, `safeRequest`, `safeGetByUrl`, `safePatchWithVersion`
-
-```typescript
-const r = await client.safeGet('/widgets');
-if (!r.ok) {
-  if (r.error.status === 404) return null;
-  throw r.error;
-}
-const doc = r.value.kind === 'jsonapi-success' ? r.value.document : undefined;
-```
-
-Non-`ApiClientError` failures (e.g. programmer errors) still throw from `safe*`.
-
----
-
-## Success results (`ClientSuccess`)
-
-Every successful verb returns a **discriminated union** — narrow on `kind`:
-
-### `jsonapi-success` (200 / 201)
-
-```typescript
-if (res.kind === 'jsonapi-success') {
-  res.status; // 200 | 201
-  res.document; // JsonApiDocument — data, included, links, meta
-  res.headers.etag;
-  res.headers.contentLanguage;
-  res.headers.idempotentReplayed; // true if Idempotent-Replayed: true
-}
-```
-
-### `no-content` (204)
-
-```typescript
-if (res.kind === 'no-content') {
-  res.status; // 204
-  res.headers;
-}
-```
-
-### `accepted` (202)
-
-```typescript
-if (res.kind === 'accepted') {
-  res.location; // absolute URL to poll (resolved from Location header)
-  res.rawBody;  // optional server body
-}
-```
-
-### `multi-status` (207)
-
-```typescript
-if (res.kind === 'multi-status') {
-  for (const item of res.items) {
-    item.httpStatus;
-    item.body;
-  }
-}
-```
-
-### Normalized headers (all success kinds)
-
-```typescript
-res.headers.etag?: string;
-res.headers.contentLanguage?: string;
-res.headers.idempotentReplayed: boolean;
-res.headers.retryAfterSeconds?: number;
 ```
 
 ---
 
-## Errors
+## Recipes
 
-### Default: `ApiClientError`
+Copy-paste patterns for everyday work.
 
-HTTP **≥ 400** and malformed JSON:API error documents throw **`ApiClientError`** (extends `Error`).
+### List resources and follow `links.next`
 
 ```typescript
-import { ApiClientError, isApiClientError } from '@vahidkaargar/customized-api-client';
+import { getNextPageUrl } from '@vahidkaargar/customized-api-client';
 
-try {
-  await client.patch('/widgets/1', payload);
-} catch (e) {
-  if (e instanceof ApiClientError) {
-    e.status;              // e.g. 422
-    e.primaryCode;         // first errors[].code
-    e.errors;              // JsonApiErrorObject[]
-    e.retryAfterSeconds;   // from Retry-After when parseable
-    e.requestMethod;       // e.g. 'PATCH'
-    e.responseHeaders;     // redacted in toJSON()
-    console.log(e.toJSON()); // safe for logs (secrets redacted)
-  }
+let res = await client.get('/widgets');
+while (res.kind === 'jsonapi-success') {
+  // use res.document.data …
+  const next = getNextPageUrl(res.document.links);
+  if (!next) break;
+  res = await client.getByUrl(next);
 }
 ```
 
-Empty or non-JSON error bodies get synthetic codes such as `EMPTY_ERROR_BODY`, `INVALID_JSON`, `MISSING_ERRORS_ARRAY`.
+### Create (POST) with a stable idempotency key
 
-### Validation UX
+```typescript
+await client.post('/widgets', payload, {
+  idempotencyKey: `create-widget-${userId}-${draftId}`,
+});
+```
+
+### Update with optimistic locking
+
+```typescript
+import { readResourceVersion } from '@vahidkaargar/customized-api-client';
+
+const current = await client.get('/widgets/42');
+if (current.kind !== 'jsonapi-success' || Array.isArray(current.document.data)) {
+  throw new Error('expected single resource');
+}
+const version = readResourceVersion(current.document.data, current.headers.etag);
+
+await client.patchWithVersion('/widgets/42', payload, version);
+// or: client.patch('/widgets/42', payload, { ifMatchVersion: version })
+```
+
+### Handle validation errors (422)
 
 ```typescript
 import {
@@ -287,65 +159,181 @@ import {
   isValidationError,
 } from '@vahidkaargar/customized-api-client';
 
-if (isValidationError(err)) {
-  const byPointer = groupValidationErrorsByPointer(err.errors);
-  // { '/data/attributes/name': ['too short', ...], '/': ['...'] }
+try {
+  await client.post('/widgets', payload);
+} catch (e) {
+  if (e instanceof ApiClientError && isValidationError(e)) {
+    const byField = groupValidationErrorsByPointer(e.errors);
+    // { '/data/attributes/name': ['too short'], … }
+  }
 }
 ```
+
+### Safe GET when 404 is normal
+
+```typescript
+const r = await client.safeGet('/widgets/unknown-id');
+if (!r.ok && r.error.status === 404) return null;
+if (!r.ok) throw r.error;
+return r.value.kind === 'jsonapi-success' ? r.value.document : undefined;
+```
+
+### Cancel an in-flight request
+
+```typescript
+const controller = new AbortController();
+const promise = client.get('/slow-report', { signal: controller.signal });
+setTimeout(() => controller.abort(), 5_000);
+await promise; // throws when aborted
+```
+
+### Poll an async job (202)
+
+```typescript
+import { pollAsyncResult } from '@vahidkaargar/customized-api-client';
+
+const accepted = await client.post('/jobs', jobPayload);
+if (accepted.kind !== 'accepted') throw new Error('expected 202');
+
+const done = await pollAsyncResult(client, accepted, {
+  maxAttempts: 10,
+  delayMs: 500,
+});
+```
+
+---
+
+## Configuration
+
+Client-level options for `createApiClient({ … })`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `baseURL` | **required** | API origin — [base URL modes](#pick-a-base-url-mode) |
+| `baseUrlMode` | `'modeB'` | `'modeB'` \| `'modeA'` |
+| `auth` | — | `{ type: 'bearer', getToken }` or `{ type: 'partner-bearer', getSecret }` |
+| `timeout` | `30000` | Axios timeout (ms) |
+| `defaultHeaders` | — | Merged into every request |
+| `retry` | see [Retries](#retries) | `maxAttempts`, backoff, jitter |
+| `generateIdempotencyKey` | ULID | Factory for mutation keys |
+| `getAcceptLanguage` | — | Sets `Accept-Language` when non-empty |
+| `onIdempotencyReplay` | — | Fired when `Idempotent-Replayed: true` |
+| `onUnauthorized` | — | Fired on normalized **401** |
+| `onDeprecated` | — | Deprecation / sunset headers |
+| `transformResponseKeys` | `'none'` | `'camelCase-attributes-meta'` on response only |
+| `maxBodyLogLength` | — | Hint for app logging; use `truncateForLog` |
+
+### Authentication
+
+User and partner credentials both use **`Authorization: Bearer …`**.
+
+```typescript
+auth: { type: 'bearer', getToken: () => getAccessToken() }
+auth: { type: 'partner-bearer', getSecret: () => process.env.PARTNER_SECRET }
+```
+
+If `getToken` / `getSecret` returns `null` or `undefined`, no `Authorization` header is sent.
+
+---
+
+## Making requests
+
+### Throwing methods
+
+| Method | HTTP | Notes |
+|--------|------|--------|
+| `get` / `head` | GET / HEAD | No idempotency key |
+| `post` / `patch` / `put` / `delete` | … | Sends `Idempotency-Key` |
+| `patchWithVersion(path, data, version)` | PATCH | Sets `If-Match` |
+| `getByUrl(fullUrl)` | GET | Absolute URL (e.g. `links.next`) |
+| `request(axConfig, opts?)` | any | Low-level escape hatch |
+
+### Safe methods
+
+`safeGet`, `safeHead`, `safePost`, `safePatch`, `safePut`, `safeDelete`, `safeRequest`, `safeGetByUrl`, `safePatchWithVersion`
+
+```typescript
+const r = await client.safePatchWithVersion('/widgets/1', body, 3);
+if (r.ok) {
+  console.log(r.value);
+} else {
+  console.log(r.error.status, r.error.primaryCode);
+}
+```
+
+---
+
+## Success results (`ClientSuccess`)
+
+Narrow on `kind`:
+
+| `kind` | Status | Main fields |
+|--------|--------|-------------|
+| `jsonapi-success` | 200, 201 | `document`, `headers` |
+| `no-content` | 204 | `headers` |
+| `accepted` | 202 | `location`, `rawBody?` |
+| `multi-status` | 207 | `items[]` with `httpStatus`, `body` |
+
+All success kinds expose `headers.etag`, `headers.contentLanguage`, `headers.idempotentReplayed`, and optional `headers.retryAfterSeconds`.
+
+---
+
+## Error handling
+
+### `ApiClientError` (default on throwing methods)
+
+HTTP **≥ 400** and malformed JSON:API error bodies throw **`ApiClientError`**.
+
+| Field | Meaning |
+|-------|---------|
+| `status` | HTTP status |
+| `primaryCode` | First `errors[].code` |
+| `errors` | `JsonApiErrorObject[]` |
+| `retryAfterSeconds` | From `Retry-After` when parseable |
+| `requestMethod` | e.g. `'PATCH'` |
+| `toJSON()` | Log-safe (secrets redacted) |
+
+Synthetic codes when the body is missing or invalid: `EMPTY_ERROR_BODY`, `INVALID_JSON`, `MISSING_ERRORS_ARRAY`.
+
+### Guards
+
+| Helper | True when |
+|--------|-----------|
+| `isAuthenticationError` | 401 |
+| `isForbiddenError` | 403 |
+| `isValidationError` | 422 |
+| `isPreconditionRequiredError` | 428 |
+| `isPreconditionFailedError` | 412 |
+| `isConflictError` | 409 |
+| `isPayloadTooLargeError` | 413 |
+| `isRetryablePerPolicy` | Would retry per client policy (UI hints) |
 
 ---
 
 ## Idempotency
 
-- **POST, PATCH, PUT, DELETE** always send **`Idempotency-Key`** (default: **ULID** per request).
-- Override per call: `opts.idempotencyKey` (non-empty, max **64** characters).
-- Replace generator: `generateIdempotencyKey: () => myKey()`.
-- On retry, the **same key and body** are reused.
-- When the server replays a prior result, response header **`Idempotent-Replayed: true`** sets `headers.idempotentReplayed` and invokes **`onIdempotencyReplay`**:
-
-```typescript
-onIdempotencyReplay: ({ url, method }) => {
-  metrics.increment('idempotency_replay');
-},
-```
-
-**GET / HEAD** never send idempotency keys.
+- **POST, PATCH, PUT, DELETE** send **`Idempotency-Key`** (ULID per request by default).
+- Retries reuse the **same key and body**.
+- Server replay → header `Idempotent-Replayed: true` → `headers.idempotentReplayed` + optional `onIdempotencyReplay`.
+- **GET / HEAD** never send idempotency keys.
 
 ---
 
 ## Optimistic concurrency
 
-Versioned resources should send **`If-Match: "v=<n>"`** when updating.
+Send **`If-Match: "v=<n>"`** when the resource is versioned:
 
 ```typescript
-// Convenience helper
-await client.patchWithVersion('/widgets/42', body, 7);
-
-// Or per call
-await client.patch('/widgets/42', body, { ifMatchVersion: 7 });
+await client.patchWithVersion('/widgets/42', body, version);
 ```
 
-Read version from a resource for the next update:
+Read version with `readResourceVersion(resource, etag)` — prefers `meta.version`, else ETag `v=n`.
 
-```typescript
-import { readResourceVersion, etagFromResponseHeaders } from '@vahidkaargar/customized-api-client';
-
-const res = await client.get('/widgets/42');
-if (res.kind !== 'jsonapi-success' || !res.document.data || Array.isArray(res.document.data)) {
-  throw new Error('expected single resource');
-}
-const resource = res.document.data;
-const version = readResourceVersion(resource, res.headers.etag);
-// Prefer meta.version (number or numeric string), else ETag v=n
-```
-
-Typical server responses: **428** (precondition required), **412** (conflict) — use [guards](#guards-and-validation-helpers); these are **not** auto-retried.
+**412** / **428** are not auto-retried.
 
 ---
 
 ## Retries
-
-Default `retry`:
 
 | Field | Default |
 |-------|---------|
@@ -354,265 +342,139 @@ Default `retry`:
 | `maxDelayMs` | `10000` |
 | `jitterRatio` | `0.2` |
 
-Honors **`Retry-After`** when present (seconds or HTTP-date).
-
-### Policy summary
-
 | Situation | Retried? |
 |-----------|----------|
-| Network error (no response) | Yes (all methods) |
+| Network error (no response) | Yes |
 | GET/HEAD **408, 429, 5xx** | Yes |
-| GET/HEAD **401, 403, 412, 428, 4xx** validation | No |
-| POST/PATCH/PUT/DELETE **5xx / 429** | **No** (same idempotency key would not help blind 5xx retry) |
-| POST/PATCH/PUT/DELETE **409** `IDEMPOTENCY_REQUEST_IN_PROGRESS` | Yes |
+| GET/HEAD **401, 403, 412, 428**, validation 4xx | No |
+| Mutations **5xx / 429** | No |
+| Mutation **409** `IDEMPOTENCY_REQUEST_IN_PROGRESS` | Yes |
 | **409** `IDEMPOTENCY_KEY_REUSED` | No |
-| **401 / 403 / 412 / 428 / 422** etc. | No |
 
-Disable retries: `retry: { maxAttempts: 1 }`.
-
-Inspect policy in tests or custom tooling: `retryAllowed({ method, status, primaryErrorCode, isNetworkError })`.
+Disable: `retry: { maxAttempts: 1 }`. Inspect logic: `retryAllowed({ … })`.
 
 ---
 
-## Pagination and query parameters
+## More helpers
 
-### Following `links.next`
-
-```typescript
-import { getNextPageUrl, parsePaginationKind } from '@vahidkaargar/customized-api-client';
-
-let res = await client.get('/widgets');
-while (res.kind === 'jsonapi-success') {
-  const kind = parsePaginationKind(res.document.meta, res.document.links);
-  // kind: 'offset' | 'cursor' | 'unknown'
-
-  const next = getNextPageUrl(res.document.links);
-  if (!next) break;
-  res = await client.getByUrl(next);
-}
-```
-
-`parsePaginationKind` understands:
-
-- JSON:API `page[number]`, `page[cursor]`, `page[size]` in `links.next`
-- Legacy `page` / `per_page` in URLs
-- `meta` fields: `current_page`, `last_page`, `has_more`, `next_cursor`, etc.
-
-### Building query strings
+### Pagination and query building
 
 ```typescript
 import {
   buildJsonApiQuery,
   buildOffsetPageParams,
   buildCursorPageParams,
-  DEFAULT_PAGE_SIZE_CAP,
+  parsePaginationKind,
 } from '@vahidkaargar/customized-api-client';
 
 const params = {
   ...buildJsonApiQuery({
-    filter: { status: 'active', owner_id: 1 },
-    sort: ['-created_at', 'name'],
-    fields: { widgets: ['name', 'status'] },
-    include: ['owner', 'tags'],
+    filter: { status: 'active' },
+    sort: ['-created_at'],
+    include: ['owner'],
   }),
   ...buildOffsetPageParams({ number: 2, size: 50 }),
 };
-// page[size] is capped at DEFAULT_PAGE_SIZE_CAP (100)
 
-await client.request({
-  method: 'GET',
-  url: '/widgets',
-  params,
-});
+await client.request({ method: 'GET', url: '/widgets', params });
 ```
 
-```typescript
-const cursorParams = buildCursorPageParams({ cursor: 'abc123', size: 25 });
-```
-
----
-
-## Included resources
+### Included resources
 
 ```typescript
 import { indexIncluded, resolveIncluded } from '@vahidkaargar/customized-api-client';
 
-const res = await client.get('/widgets/1?include=owner');
-if (res.kind !== 'jsonapi-success') return;
-
 const idx = indexIncluded(res.document.included);
-const ownerRef = { type: 'users', id: '9' };
-const owner = resolveIncluded(ownerRef, idx);
+const owner = resolveIncluded({ type: 'users', id: '9' }, idx);
 ```
 
----
-
-## Async jobs (202) and polling
-
-```typescript
-import { pollAsyncResult } from '@vahidkaargar/customized-api-client';
-
-const accepted = await client.post('/jobs', { data: { type: 'jobs', attributes: { … } } });
-if (accepted.kind !== 'accepted') throw new Error('expected 202');
-
-const done = await pollAsyncResult(client, accepted, {
-  maxAttempts: 10,
-  delayMs: 500,
-});
-// Polls GET on location until non-202 or max attempts (then throws)
-```
-
-`accepted.location` is absolute (resolved from `Location` relative to the request URL when needed).
-
----
-
-## Bulk operations (207)
+### Bulk 207
 
 ```typescript
 const res = await client.post('/bulk/widgets', bulkPayload);
 if (res.kind === 'multi-status') {
   for (const item of res.items) {
-    if (item.httpStatus >= 400) {
-      // item.body may be a JSON:API error document
-    }
+    if (item.httpStatus >= 400) { /* item.body may be errors */ }
   }
 }
 ```
 
----
-
-## Response key transformation
-
-Wire format uses **snake_case** in JSON:API `attributes` / `meta`. Opt in to shallow **camelCase** on responses only:
+### Response camelCase (opt-in)
 
 ```typescript
-const client = createApiClient({
-  baseURL: 'https://api.example.com/api/v1',
+createApiClient({
+  baseURL: '…',
   transformResponseKeys: 'camelCase-attributes-meta',
 });
-
-const res = await client.get('/widgets/1');
-if (res.kind === 'jsonapi-success' && !Array.isArray(res.document.data) && res.document.data) {
-  const attrs = res.document.data.attributes as { displayName?: string };
-}
+// Request bodies are NOT transformed — send snake_case on the wire.
 ```
 
-**Request bodies are not transformed** — send snake_case (or whatever your API expects).
+### Security and logging
 
----
+- Tokens only from your `getToken` / `getSecret` callbacks.
+- `redactHeaderRecord`, `truncateForLog`, `ApiClientError.toJSON()` redact secrets.
+- Non-HTTPS `baseURL` (except localhost) logs a one-time warning.
 
-## Guards and validation helpers
-
-| Function | True when |
-|----------|-----------|
-| `isAuthenticationError` | `ApiClientError` status **401** |
-| `isForbiddenError` | **403** |
-| `isValidationError` | **422** |
-| `isPreconditionRequiredError` | **428** |
-| `isPreconditionFailedError` | **412** |
-| `isConflictError` | **409** |
-| `isPayloadTooLargeError` | **413** |
-| `isRetryablePerPolicy` | Would retry per client policy (usually for UI hints, not for manual retry of failed calls) |
-
----
-
-## Security and logging
-
-- Tokens come only from your **`getToken` / `getSecret`** callbacks; the client does not store credentials.
-- **`ApiClientError.toJSON()`** and **`redactHeaderRecord()`** redact `Authorization` and `Idempotency-Key`.
-- **`truncateForLog(value, maxLen)`** safely stringifies values for logs (truncates, handles circular refs).
-- Non-HTTPS `baseURL` outside **localhost** logs a **one-time** console warning.
-
-```typescript
-import { truncateForLog, redactHeaderRecord } from '@vahidkaargar/customized-api-client';
-
-logger.info(truncateForLog(responseBody, 2_000));
-```
-
----
-
-## Health checks
+### Health check
 
 ```typescript
 import { createHealthCheck } from '@vahidkaargar/customized-api-client';
 
-const ping = createHealthCheck(client); // or pass ApiClientConfig to build a client internally
-const ok = await ping(); // GET /health/live — true if no throw
+const ping = createHealthCheck(client);
+const ok = await ping(); // GET /health/live
 ```
 
 ---
 
 ## Typing your API
 
-This package exports **JSON:API primitives** (`JsonApiDocument`, `ClientSuccess`, helpers)—not endpoint-specific types tied to one backend.
+This package ships **generic JSON:API types**, not endpoint-specific OpenAPI types.
 
-If you want OpenAPI-driven types:
-
-1. Keep the spec in your **backend** repo or a dedicated **`@myorg/api-types`** package.
-2. Run codegen there (for example [`openapi-typescript`](https://github.com/drwpow/openapi-typescript))—not in this client package.
-3. Pass generated types at call sites via generics:
+1. Keep OpenAPI in your backend or `@myorg/api-types`.
+2. Codegen there (e.g. `openapi-typescript`).
+3. Use generics at call sites:
 
 ```typescript
-import { createApiClient } from '@vahidkaargar/customized-api-client';
 import type { operations } from '@myorg/api-types';
-
-const client = createApiClient({ baseURL: 'https://api.example.com/api/v1', getToken: async () => token });
 
 type MeResponse = operations['getMe']['responses'][200]['content']['application/vnd.api+json'];
 const me = await client.get<MeResponse>('/me');
 ```
 
-You do not need an OpenAPI spec to use this client—string paths and manual types work fine.
+String paths and manual types work without OpenAPI.
 
 ---
 
-## Advanced / low-level exports
+## Advanced exports
 
-For custom pipelines, tests, or wrappers:
+For custom wrappers, tests, or pipelines:
 
-| Export | Purpose |
-|--------|---------|
-| `normalizeAxiosResponse` | Map raw Axios response → `ClientSuccess` / throw |
-| `parseJsonApiDocument` / `parseJsonApiErrorBody` | Parse success/error payloads |
-| `dispatchWithRetry` | Retry wrapper around an `AxiosInstance` |
-| `applyJsonApiHeaders` | Content-Type / Accept for JSON:API |
-| `resolveResourcePath` | Mode A/B path resolution |
-| `flattenAxiosHeaders` / `getHeader` | Header normalization |
-| `parseMultiStatusBody` / `resolveAcceptedLocation` | 207 / 202 helpers |
-| `parseRetryAfterSeconds` | Retry-After parsing |
-| `assertValidIdempotencyKey` / `defaultIdempotencyKey` | Idempotency utilities |
+`normalizeAxiosResponse`, `parseJsonApiDocument`, `parseJsonApiErrorBody`, `dispatchWithRetry`, `applyJsonApiHeaders`, `resolveResourcePath`, `parseMultiStatusBody`, `parseRetryAfterSeconds`, `assertValidIdempotencyKey`, …
+
+Full list: [`src/index.ts`](./src/index.ts).
 
 ---
 
-## API reference (exports)
+## Table of contents (full reference)
 
-### Client
-
-- `createApiClient(config)` → `ApiClient`
-- Types: `ApiClient`, `ApiClientConfig`, `RequestCallOptions`, `AuthConfig`, `RetryOptions`, …
-
-### Results & errors
-
-- `ClientSuccess`, `JsonApiSuccessBody`, `NoContentBody`, `AcceptedBody`, `MultiStatusBody`
-- `Result`, `OkResult`, `ErrResult`
-- `ApiClientError`, `isApiClientError`
-
-### JSON:API types
-
-- `JsonApiDocument`, `JsonApiResourceObject`, `JsonApiErrorObject`, …
-
-### Helpers
-
-- Pagination: `getNextPageUrl`, `parsePaginationKind`
-- Query: `buildJsonApiQuery`, `buildOffsetPageParams`, `buildCursorPageParams`
-- Included: `indexIncluded`, `resolveIncluded`
-- Version: `readResourceVersion`, `etagFromResponseHeaders`
-- Forms: `groupValidationErrorsByPointer`
-- Deprecation: `parseDeprecationHeaders`, `DeprecationInfo`
-- Transform: `applyTransformKeys`
-- Poll: `pollAsyncResult`
-- Health: `createHealthCheck`
-- Security: `redactHeaderRecord`, `truncateForLog`
+1. [What you get](#what-you-get)
+2. [Install](#install)
+3. [Quick start](#quick-start)
+4. [Guide for application developers](#guide-for-application-developers)
+5. [Recipes](#recipes)
+6. [Configuration](#configuration)
+7. [Making requests](#making-requests)
+8. [Success results](#success-results-clientsuccess)
+9. [Error handling](#error-handling)
+10. [Idempotency](#idempotency)
+11. [Optimistic concurrency](#optimistic-concurrency)
+12. [Retries](#retries)
+13. [More helpers](#more-helpers)
+14. [Typing your API](#typing-your-api)
+15. [Advanced exports](#advanced-exports)
+16. [Development](#development-this-repository)
+17. [Supply chain](#supply-chain)
+18. [Publishing](#publishing-maintainers)
 
 ---
 
@@ -629,35 +491,29 @@ npm run build
 npx vitest run --config vitest.postbuild.config.ts
 ```
 
-CI uses **`node-version: '22.21'`** in **[`ci.yml`](.github/workflows/ci.yml)** plus global **npm** **`^11.5.1`**, pinned that way because bare **`22`** can resolve to **22.22.x** with a bundled npm regression that breaks **`npm install -g npm`** on GitHub-hosted runners ([runner-images discussion](https://github.com/actions/runner-images/issues/13883)).
+CI uses **`node-version: '22.21'`** in [`ci.yml`](.github/workflows/ci.yml) plus global **npm** `^11.5.1`.
 
 ---
 
 ## Supply chain
 
-- **SECURITY policy:** Root [SECURITY.md](SECURITY.md) — supported versions and how to report issues privately.
-- **Dependabot:** [`.github/dependabot.yml`](.github/dependabot.yml) requests weekly npm bumps; enable **Dependabot alerts** / **security updates** in repo settings when available.
-- **CI audit:** **`npm audit --omit=dev --audit-level=moderate`** runs on every **`main`/PR** CI (production dependencies only).
-- **Provenance:** The publish workflow ships **`npm publish --provenance`** when using [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) (OIDC from GitHub Actions).
+- [SECURITY.md](SECURITY.md) — reporting vulnerabilities
+- [`.github/dependabot.yml`](.github/dependabot.yml) — weekly dependency PRs
+- CI runs **`npm audit --omit=dev --audit-level=moderate`** on production deps
+- Publish uses **`npm publish --provenance`** (OIDC)
 
 ---
 
 ## Publishing (maintainers)
 
-**Preferred:** [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) (OIDC) — no long-lived **`NPM_TOKEN`** in GitHub Secrets for this workflow.
+1. Bump **`version`** in **`package.json`** and update **[CHANGELOG.md](./CHANGELOG.md)**.
+2. Merge to **`main`**, then **Actions → Publish to npm → Run workflow**.
+3. Workflow fails fast if the version already exists on npm.
 
-1. On [npmjs.com](https://www.npmjs.com/) → package **Access** / **Publishing** settings: enable **Trusted publishing** from **GitHub** for repository **`vahidkaargar/customized-api-client`**, selecting workflow **`.github/workflows/publish-npm.yml`** (exact filename as registered on npm).
-2. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow** ( **`workflow_dispatch`** ).
-3. **`publish-npm.yml`** exits early if **`package.json`** `version` is already on npm so you avoid a long failed run (**fail-fast before** tests and build).
-
-Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gate sequence as **[`ci.yml`](.github/workflows/ci.yml)** (Node **`22.21`**, global **npm** **`^11.5.1`**, prod dependency **audit**, typecheck, lint, test coverage, build, and post-build Vitest) and then **`npm publish --provenance`**.
-
-**Legacy (token publish):** If Trusted Publishing cannot be configured, restore a publish step env block with **`NODE_AUTH_TOKEN`** from a granular npm token (**Read and write** for this package; **Automation / bypass 2FA** if your npm account requires it for unattended publish). Prefer OIDC for supply-chain hygiene once enabled.
-
-[`publishConfig.access`](package.json) on this scope is **`public`**.
+[`publish-npm.yml`](.github/workflows/publish-npm.yml) runs the same gates as [`ci.yml`](.github/workflows/ci.yml) (audit, typecheck, lint, coverage, build, post-build tests), then publishes with provenance.
 
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).

@@ -7,29 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-16
+
 ### Added
 
-- New `safeGetByUrl()` and `safePatchWithVersion()` instance methods to complete the safe* parity across all verbs
-- Optional `signal?: AbortSignal` on `RequestCallOptions` for request cancellation (no new dependencies)
-- Comprehensive test coverage for all mutation HTTP methods (DELETE, PUT, PATCH idempotency headers on wire)
-- Test coverage for retry policy on HEAD, DELETE, PUT, and PATCH methods
-- Test coverage for retry-after header edge cases (undefined, empty string)
-- Test coverage for `formatIfMatch()` with boundary values (version 0, NaN, Infinity)
-- Test coverage for form error grouping with empty errors array
-- Test coverage for 207 multi-status with top-level array format
-- Test coverage for config wiring (`defaultHeaders`, custom `generateIdempotencyKey`, `timeout`)
-- Test coverage for `Idempotent-Replayed: 'True'` (capital T) header normalization
-- MIT LICENSE file for legal clarity
+- `safeGetByUrl()` and `safePatchWithVersion()` for full `safe*` parity with throwing verbs
+- Optional `signal?: AbortSignal` on `RequestCallOptions` for request cancellation
+- Root `LICENSE` (MIT) and `CHANGELOG.md`
+- Expanded tests: mutation idempotency on wire, retry policy for HEAD/PUT/PATCH/DELETE, config wiring, 207 array bodies, and related edge cases
 
 ### Changed
 
-- Consolidated duplicate `Retry-After` header parsing: removed private `parseRetryAfterHeader()` in `src/parse/errors.ts`, now uses shared `parseRetryAfterSeconds()` from `src/retry/retry-after.ts`
-- Updated `.github/workflows/publish-npm.yml` to include `npm audit --omit=dev --audit-level=moderate` for prod dependency verification parity with CI
-- Updated README Publishing section to document exact gate sequence parity between publish and CI workflows
+- README reorganized for application developers: quick start, decision tables, recipes, collapsible helper sections
+- Deduplicated `Retry-After` parsing via shared `parseRetryAfterSeconds()`
+- Publish workflow runs production `npm audit` (parity with CI)
 
 ### Fixed
 
-- Removed misleading claim in README about publish workflow gates — now accurately states full test and audit sequence
+- README no longer lists `signal` as a client-level config option (it is per-request only)
 
 ## [0.2.2] - 2026-05-16
 
@@ -37,5 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/vahidkaargar/customized-api-client/releases/tag/v0.2.2
