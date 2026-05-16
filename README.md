@@ -2,9 +2,6 @@
 
 TypeScript **Axios** client for JSON:API **v1.1** with mandatory **idempotency** on mutations, optimistic concurrency, normalized success/error shapes, retries, and optional **`transformResponseKeys`**.
 
-**Authoritative spec:** [`.cursor/tasks/project-plan.md`](.cursor/tasks/project-plan.md)  
-**Agent rules:** [`AGENTS.md`](AGENTS.md), [`.cursorrules`](.cursorrules)
-
 ---
 
 ## Install
@@ -82,10 +79,9 @@ Configurable **`retry`** (defaults: **`maxAttempts: 4`**, `baseDelayMs: 200`, `m
 
 Commit **`src/generated/openapi.ts`** is generated — **do not edit by hand**.
 
-Default spec path in this repo:
+Bundled spec: **`openapi/v1.yaml`**. Regenerate types with:
 
 ```bash
-export OPENAPI_PATH=.cursor/api-documentations/openapi/v1.yaml
 npm run openapi:generate
 ```
 
@@ -104,19 +100,11 @@ Re-run after spec changes; override **`OPENAPI_PATH`** to another checkout if ne
 
 ---
 
-## Development (no API keys required)
-
-**Tests & build:** `npm run typecheck && npm run lint && npm run test:coverage && npm run build`
-
-**Knowledge graph (AST-only):** after code changes, from this package root:
+## Development
 
 ```bash
-graphify update .
+npm run typecheck && npm run lint && npm run test:coverage && npm run build
 ```
-
-Outputs live under **`graphify-out/`** (`GRAPH_REPORT.md`, `graph.html`). This does **not** need Gemini/OpenAI/Anthropic keys. Do **not** use `graphify .` in the shell (invalid). **`graphify extract .`** is optional and **does** require an LLM API key for semantic enrichment.
-
-In **Cursor chat**, ask the agent to use the graphify skill or read `graphify-out/GRAPH_REPORT.md` before architecture questions.
 
 ---
 
