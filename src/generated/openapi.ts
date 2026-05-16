@@ -6948,7 +6948,7 @@ export interface operations {
                     /**
                      * @description RFC 6266 attachment header. Includes both an ASCII fallback
                      *     (`filename=`) and a UTF-8 percent-encoded form (`filename*=`).
-                     * @example attachment; filename="mobogift-export-01J….json"; filename*=UTF-8''mobogift-export-01J%E2%80%A6.json
+                     * @example attachment; filename="api-export-01J….json"; filename*=UTF-8''api-export-01J%E2%80%A6.json
                      */
                     "Content-Disposition"?: string;
                     /**

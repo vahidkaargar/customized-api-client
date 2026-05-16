@@ -1,9 +1,9 @@
 openapi: 3.0.3
 
 info:
-  title: Mobogift Public API
+  title: JSON:API v1 HTTP API
   description: |
-    Public, versioned HTTP surface of the Mobogift platform. Every request
+    Public, versioned HTTP API surface (JSON:API v1.1). Every request
     and response on this contract MUST conform to JSON:API v1.1
     (https://jsonapi.org/format/1.1/) and is validated by Spectator in CI.
 
@@ -29,8 +29,8 @@ info:
       IDEMPOTENCY_REQUEST_IN_PROGRESS`.
   version: 1.0.0
   contact:
-    name: Mobogift Backend
-    url: https://github.com/vahidkaargar/laravel-ddd-ai
+    name: API maintainers
+    url: https://github.com/vahidkaargar/customized-api-client
 
 servers:
   - url: /api/v1
@@ -4119,7 +4119,7 @@ paths:
                 (`filename=`) and a UTF-8 percent-encoded form (`filename*=`).
               schema:
                 type: string
-              example: attachment; filename="mobogift-export-01J….json"; filename*=UTF-8''mobogift-export-01J%E2%80%A6.json
+              example: attachment; filename="api-export-01J….json"; filename*=UTF-8''api-export-01J%E2%80%A6.json
             Cache-Control:
               description: Forces clients/proxies to never cache the decrypted bytes.
               schema:
