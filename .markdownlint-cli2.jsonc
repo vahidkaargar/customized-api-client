@@ -1,0 +1,11 @@
+{
+  "globs": [
+    "**/*.md",
+    "!node_modules/**",
+    "!dist/**",
+    "!coverage/**",
+    "!.cursor/**",
+    "!graphify-out/**",
+    "!AGENTS.md"
+  ]
+}
