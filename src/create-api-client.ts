@@ -27,6 +27,7 @@ import { parseDeprecationHeaders } from './helpers/deprecation.ts';
 export interface RequestCallOptions {
   readonly idempotencyKey?: string;
   readonly ifMatchVersion?: number;
+  readonly signal?: AbortSignal;
 }
 
 export interface ApiClient {
@@ -77,6 +78,16 @@ export interface ApiClient {
   readonly safeRequest: (
     ax: AxiosRequestConfig,
     opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccess, ApiClientError>>;
+  readonly safeGetByUrl: (
+    fullUrl: string,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccess, ApiClientError>>;
+  readonly safePatchWithVersion: (
+    path: string,
+    data: unknown,
+    version: number,
+    opts?: Omit<RequestCallOptions, 'ifMatchVersion'>,
   ) => Promise<Result<ClientSuccess, ApiClientError>>;
 }
 
@@ -215,6 +226,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       url,
       data: options.data,
       headers: { ...headers },
+      ...(options.signal && { signal: options.signal }),
     };
 
     try {
@@ -309,6 +321,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     safeDelete: (path, opts) => safe(() => client.delete(path, opts)),
     safeHead: (path, opts) => safe(() => client.head(path, opts)),
     safeRequest: (ax, opts) => safe(() => client.request(ax, opts)),
+    safeGetByUrl: (url, opts) => safe(() => client.getByUrl(url, opts)),
+    safePatchWithVersion: (path, data, version, opts) =>
+      safe(() => client.patchWithVersion(path, data, version, opts)),
   };
 
   return client;

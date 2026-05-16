@@ -475,7 +475,7 @@ describe('coverage 100% helpers and parse', () => {
     expect(done.kind).toBe('jsonapi-success');
   });
 
-  it('normalizeHeaders idempotent-replayed True', async () => {
+  it('normalizeHeaders idempotent-replayed lowercase true', async () => {
     const onIdempotencyReplay = vi.fn();
     server.use(
       http.get('http://localhost/api/v1/true-replay', () =>
@@ -496,5 +496,23 @@ describe('coverage 100% helpers and parse', () => {
     expect(onIdempotencyReplay).toHaveBeenCalledWith(
       expect.objectContaining({ url: '/true-replay', method: 'get' }),
     );
+  });
+
+  it('normalizeHeaders idempotent-replayed capital True', async () => {
+    server.use(
+      http.get('http://localhost/api/v1/capital-true-replay', () =>
+        HttpResponse.json(
+          { data: { type: 't', id: '1' } },
+          { status: 200, headers: { 'Idempotent-Replayed': 'True' } },
+        ),
+      ),
+    );
+    const client = createApiClient({
+      baseURL: 'http://localhost/api/v1',
+    });
+    const res = await client.get('/capital-true-replay');
+    if (res.kind === 'jsonapi-success') {
+      expect(res.headers.idempotentReplayed).toBe(true);
+    }
   });
 });

@@ -12,4 +12,12 @@ describe('parseRetryAfterSeconds', () => {
     expect(s).toBeDefined();
     expect(s).toBeGreaterThanOrEqual(0);
   });
+
+  it('returns undefined for undefined input', () => {
+    expect(parseRetryAfterSeconds(undefined)).toBeUndefined();
+  });
+
+  it('returns undefined for empty string', () => {
+    expect(parseRetryAfterSeconds('')).toBeUndefined();
+  });
 });

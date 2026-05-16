@@ -84,4 +84,44 @@ describe('safe methods', () => {
     const r = await client.safeDelete('/d');
     expect(r.ok).toBe(false);
   });
+
+  it('safeGetByUrl ok on 200', async () => {
+    server.use(
+      http.get('http://other.host/x', () =>
+        HttpResponse.json({ data: { type: 't', id: '1' } }, { status: 200 }),
+      ),
+    );
+    const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
+    const r = await client.safeGetByUrl('http://other.host/x');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.kind).toBe('jsonapi-success');
+  });
+
+  it('safePatchWithVersion ok on 200', async () => {
+    server.use(
+      http.patch('http://localhost/api/v1/p/1', ({ request }) => {
+        const ifMatch = request.headers.get('If-Match');
+        if (ifMatch === '"v=3"') {
+          return HttpResponse.json({ data: { type: 'p', id: '1' } }, { status: 200 });
+        }
+        return HttpResponse.json({ errors: [{ code: 'STALE_VERSION' }] }, { status: 412 });
+      }),
+    );
+    const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
+    const r = await client.safePatchWithVersion('/p/1', {}, 3);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.kind).toBe('jsonapi-success');
+  });
+
+  it('safePatchWithVersion Err on 412', async () => {
+    server.use(
+      http.patch('http://localhost/api/v1/p/2', () =>
+        HttpResponse.json({ errors: [{ code: 'STALE_VERSION' }] }, { status: 412 }),
+      ),
+    );
+    const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
+    const r = await client.safePatchWithVersion('/p/2', {}, 5);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.status).toBe(412);
+  });
 });

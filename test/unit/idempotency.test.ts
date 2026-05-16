@@ -24,6 +24,13 @@ describe('idempotency helpers', () => {
 
   it('mutation methods', () => {
     expect(isMutationMethod('post')).toBe(true);
+    expect(isMutationMethod('POST')).toBe(true);
+    expect(isMutationMethod('patch')).toBe(true);
+    expect(isMutationMethod('PATCH')).toBe(true);
+    expect(isMutationMethod('put')).toBe(true);
+    expect(isMutationMethod('PUT')).toBe(true);
+    expect(isMutationMethod('delete')).toBe(true);
+    expect(isMutationMethod('DELETE')).toBe(true);
     expect(isMutationMethod('GET')).toBe(false);
     expect(isMutationMethod('head')).toBe(false);
   });

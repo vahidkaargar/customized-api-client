@@ -94,6 +94,7 @@ Pass a single config object to `createApiClient`:
 | `getAcceptLanguage` | `() => string \| null \| …` | — | Sets `Accept-Language` when returned value is non-empty. |
 | `defaultHeaders` | `Record<string, string>` | — | Merged into every request (after JSON:API defaults). |
 | `timeout` | `number` | `30000` | Axios timeout in ms. |
+| `signal` | `AbortSignal` | — | Pass per-request `AbortSignal` on `RequestCallOptions` for cancellation. |
 | `retry` | `RetryOptions` | see [Retries](#retries) | Bounded retry with backoff. |
 | `generateIdempotencyKey` | `() => string` | ULID | Custom idempotency key factory for mutations. |
 | `onIdempotencyReplay` | `(ctx) => void` | — | Called when response has `Idempotent-Replayed: true`. |
@@ -168,17 +169,20 @@ await client.get('/teams'); // → https://api.example.com/api/v1/teams
 Per-call options (`RequestCallOptions`):
 
 ```typescript
+const controller = new AbortController();
 await client.post('/widgets', body, {
   idempotencyKey: 'my-stable-key', // max 64 chars
   ifMatchVersion: 3,
+  signal: controller.signal, // optional cancellation
 });
+// Later: controller.abort();
 ```
 
 ### Safe variants (no throw on `ApiClientError`)
 
 Return `Result<ClientSuccess, ApiClientError>`: `{ ok: true, value }` or `{ ok: false, error }`.
 
-- `safeGet`, `safeHead`, `safePost`, `safePatch`, `safePut`, `safeDelete`, `safeRequest`
+- `safeGet`, `safeHead`, `safePost`, `safePatch`, `safePut`, `safeDelete`, `safeRequest`, `safeGetByUrl`, `safePatchWithVersion`
 
 ```typescript
 const r = await client.safeGet('/widgets');
@@ -646,7 +650,7 @@ CI uses **`node-version: '22.21'`** in **[`ci.yml`](.github/workflows/ci.yml)** 
 2. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow** ( **`workflow_dispatch`** ).
 3. **`publish-npm.yml`** exits early if **`package.json`** `version` is already on npm so you avoid a long failed run (**fail-fast before** tests and build).
 
-Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gates as **[`ci.yml`](.github/workflows/ci.yml)** (Node **`22.21`**, global **npm** **`^11.5.1`**) and then **`npm publish --provenance`**.
+Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gate sequence as **[`ci.yml`](.github/workflows/ci.yml)** (Node **`22.21`**, global **npm** **`^11.5.1`**, prod dependency **audit**, typecheck, lint, test coverage, build, and post-build Vitest) and then **`npm publish --provenance`**.
 
 **Legacy (token publish):** If Trusted Publishing cannot be configured, restore a publish step env block with **`NODE_AUTH_TOKEN`** from a granular npm token (**Read and write** for this package; **Automation / bypass 2FA** if your npm account requires it for unattended publish). Prefer OIDC for supply-chain hygiene once enabled.
 

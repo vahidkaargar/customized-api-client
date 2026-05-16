@@ -11,4 +11,9 @@ describe('groupValidationErrorsByPointer', () => {
     expect(g['/data/attributes/name']?.length).toBe(2);
     expect(g['/']?.[0]).toContain('no pointer');
   });
+
+  it('returns empty object for empty array', () => {
+    const g = groupValidationErrorsByPointer([]);
+    expect(g).toEqual({});
+  });
 });

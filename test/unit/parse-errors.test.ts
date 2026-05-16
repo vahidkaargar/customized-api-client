@@ -55,4 +55,9 @@ describe('parseJsonApiErrorBody', () => {
     const e = parseJsonApiErrorBody(400, { errors: 'bad' as unknown as [] }, {}, 'GET');
     expect(e.primaryCode).toBe('MISSING_ERRORS_ARRAY');
   });
+
+  it('empty errors array', () => {
+    const e = parseJsonApiErrorBody(400, { errors: [] }, {}, 'GET');
+    expect(e.primaryCode).toBe('MISSING_ERRORS_ARRAY');
+  });
 });

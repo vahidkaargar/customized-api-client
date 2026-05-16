@@ -1,5 +1,6 @@
 import { ApiClientError } from '../types/api-client-error.ts';
 import type { JsonApiErrorDocument, JsonApiErrorObject } from '../types/jsonapi.ts';
+import { parseRetryAfterSeconds } from '../retry/retry-after.ts';
 
 export function parseJsonApiErrorBody(
   status: number,
@@ -7,9 +8,7 @@ export function parseJsonApiErrorBody(
   headers: Readonly<Record<string, string>>,
   requestMethod?: string,
 ): ApiClientError {
-  const retryAfterSeconds = headers['retry-after']
-    ? parseRetryAfterHeader(headers['retry-after'])
-    : undefined;
+  const retryAfterSeconds = parseRetryAfterSeconds(headers['retry-after']);
 
   if (rawBody === null || rawBody === undefined || rawBody === '') {
     return new ApiClientError(
@@ -80,15 +79,4 @@ function syntheticError(
   requestMethod?: string,
 ): ApiClientError {
   return new ApiClientError(status, [{ code, detail }], code, undefined, undefined, requestMethod);
-}
-
-function parseRetryAfterHeader(v: string): number | undefined {
-  const n = Number.parseInt(v, 10);
-  if (!Number.isNaN(n)) return n;
-  const ms = Date.parse(v);
-  if (!Number.isNaN(ms)) {
-    const delta = Math.max(0, Math.ceil((ms - Date.now()) / 1000));
-    return delta;
-  }
-  return undefined;
 }

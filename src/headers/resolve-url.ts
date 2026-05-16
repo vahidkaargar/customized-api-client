@@ -20,7 +20,7 @@ export function resolveResourcePath(baseURL: string, path: string, mode: BaseUrl
 }
 
 /**
- * Prepare request URL for axios — if `fullUrl` is absolute http(s), return as-is for getByUrl.
+ * Identity passthrough for absolute URLs used by `getByUrl`; reserved for future normalization.
  */
 export function normalizeHttpUrl(fullUrl: string): string {
   return fullUrl;
