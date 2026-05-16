@@ -29,6 +29,9 @@ TypeScript **Axios** client for **JSON:API v1.1** APIs. It targets backends that
 19. [Typing your API](#typing-your-api)
 20. [Advanced / low-level exports](#advanced--low-level-exports)
 21. [API reference (exports)](#api-reference-exports)
+22. [Development](#development-this-repository)
+23. [Supply chain](#supply-chain)
+24. [Publishing](#publishing-maintainers)
 
 ---
 
@@ -612,25 +615,39 @@ For custom pipelines, tests, or wrappers:
 ## Development (this repository)
 
 ```bash
+npm install -g npm@^11.5.1
 npm ci
+npm audit --omit=dev --audit-level=moderate
 npm run typecheck
 npm run lint
 npm run test:coverage
 npm run build
+npx vitest run --config vitest.postbuild.config.ts
 ```
 
 ---
 
-## Publishing (maintainers — CI token)
+## Supply chain
 
-Publishing uses a **Granular Access Token** and GitHub Actions so you don’t need `npm publish --otp` on your laptop:
+- **SECURITY policy:** Root [SECURITY.md](SECURITY.md) — supported versions and how to report issues privately.
+- **Dependabot:** [`.github/dependabot.yml`](.github/dependabot.yml) requests weekly npm bumps; enable **Dependabot alerts** / **security updates** in repo settings when available.
+- **CI audit:** **`npm audit --omit=dev --audit-level=moderate`** runs on every **`main`/PR** CI (production dependencies only).
+- **Provenance:** The publish workflow ships **`npm publish --provenance`** when using [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) (OIDC from GitHub Actions).
 
-1. On [npmjs.com → Access Tokens](https://www.npmjs.com/settings/~/tokens): **Generate New Token** → **Granular Access Token**.
-2. Under packages, select **`@vahidkaargar/customized-api-client`** with **Read and write** (and **Automations** / **Bypass two-factor authentication** if npm shows that option for unattended publish — required when your account enforces 2FA on writes).
-3. In this GitHub repo: **Settings** → **Secrets and variables** → **Actions** → create **`NPM_TOKEN`** with that token value.
-4. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow**.
+---
 
-That workflow repeats the CI gate, then runs **`npm publish`** ( **`publishConfig.access`** is **`public`** for this scope).
+## Publishing (maintainers)
+
+**Preferred:** [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) (OIDC) — no long-lived **`NPM_TOKEN`** in GitHub Secrets for this workflow.
+
+1. On [npmjs.com](https://www.npmjs.com/) → package **Access** / **Publishing** settings: enable **Trusted publishing** from **GitHub** for repository **`vahidkaargar/customized-api-client`**, selecting workflow **`.github/workflows/publish-npm.yml`** (exact filename as registered on npm).
+2. Bump **`version`** in **`package.json`**, merge to **`main`**, then **Actions** → **Publish to npm** → **Run workflow** ( **`workflow_dispatch`** ).
+
+Workflow permissions use **`contents: read`** and **`id-token: write`**; **[`publish-npm.yml`](.github/workflows/publish-npm.yml)** runs the same gates as **[`ci.yml`](.github/workflows/ci.yml)** (Node **22**, global **npm** **`^11.5.1`**) and then **`npm publish --provenance`**.
+
+**Legacy (token publish):** If Trusted Publishing cannot be configured, restore a publish step env block with **`NODE_AUTH_TOKEN`** from a granular npm token (**Read and write** for this package; **Automation / bypass 2FA** if your npm account requires it for unattended publish). Prefer OIDC for supply-chain hygiene once enabled.
+
+[`publishConfig.access`](package.json) on this scope is **`public`**.
 
 ---
 

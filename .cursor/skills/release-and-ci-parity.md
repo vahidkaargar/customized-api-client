@@ -1,9 +1,11 @@
 # Release gates — parity with CI
 
-Order matches **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** and should pass before tagging or publishing:
+Order matches **[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)** and should pass before tagging or publishing. CI runs on **Node.js 22** with global **npm** **`^11.5.1`** (install after `setup-node`; see workflow).
 
 ```bash
+npm install -g npm@^11.5.1
 npm ci
+npm audit --omit=dev --audit-level=moderate
 npm run typecheck
 npm run lint
 npm run test:coverage
@@ -19,4 +21,4 @@ Optional sanity: **`npm pack --dry-run`** (tarball lists **`dist/`** + **`README
 
 ## Docs
 
-Maintain alignment with **`README.md`** (“Development” section).
+Maintain alignment with **`README.md`** (**Development**, **Supply chain**, **Publishing**) and **`[SECURITY.md](../../SECURITY.md)`**.
