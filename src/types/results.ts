@@ -43,6 +43,12 @@ export interface MultiStatusBody {
 
 export type ClientSuccess = JsonApiSuccessBody | NoContentBody | AcceptedBody | MultiStatusBody;
 
+export type ClientSuccessWithDocument<T extends JsonApiDocument = JsonApiDocument> =
+  | (JsonApiSuccessBody & { readonly document: T })
+  | NoContentBody
+  | AcceptedBody
+  | MultiStatusBody;
+
 export interface OkResult<T extends ClientSuccess> { readonly ok: true; readonly value: T }
 export interface ErrResult<E> { readonly ok: false; readonly error: E }
 export type Result<T extends ClientSuccess, E> = OkResult<T> | ErrResult<E>;

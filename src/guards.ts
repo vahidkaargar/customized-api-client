@@ -1,6 +1,15 @@
 import { ApiClientError } from './types/api-client-error.ts';
 import { retryAllowed } from './retry/policy.ts';
 
+export function hasErrorCode(error: unknown, code: string): boolean {
+  if (!(error instanceof ApiClientError)) return false;
+  return error.errors.some((e) => e.code === code);
+}
+
+export function isApiClientErrorWithCode(error: unknown, code: string): error is ApiClientError {
+  return hasErrorCode(error, code);
+}
+
 export function isAuthenticationError(e: unknown): boolean {
   return isApiErr(e, 401);
 }
@@ -9,8 +18,21 @@ export function isForbiddenError(e: unknown): boolean {
   return isApiErr(e, 403);
 }
 
+/** True for any HTTP 428. Prefer code-specific helpers when branching on `errors[].code`. */
 export function isPreconditionRequiredError(e: unknown): boolean {
   return isApiErr(e, 428);
+}
+
+export function isIdempotencyKeyRequiredError(e: unknown): boolean {
+  return isApiErrWithCode(e, 428, 'IDEMPOTENCY_KEY_REQUIRED');
+}
+
+export function isIfMatchRequiredError(e: unknown): boolean {
+  return isApiErrWithCode(e, 428, 'IF_MATCH_REQUIRED');
+}
+
+export function isMfaVerificationRequiredError(e: unknown): boolean {
+  return isApiErrWithCode(e, 428, 'MFA_VERIFICATION_REQUIRED');
 }
 
 export function isPreconditionFailedError(e: unknown): boolean {
@@ -45,4 +67,8 @@ export function isRetryablePerPolicy(
 
 function isApiErr(e: unknown, status: number): boolean {
   return e instanceof ApiClientError && e.status === status;
+}
+
+function isApiErrWithCode(e: unknown, status: number, code: string): boolean {
+  return isApiErr(e, status) && hasErrorCode(e, code);
 }

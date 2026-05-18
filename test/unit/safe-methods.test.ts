@@ -74,6 +74,28 @@ describe('safe methods', () => {
     expect(r.ok).toBe(true);
   });
 
+  it('safeRequest with absolute url', async () => {
+    server.use(
+      http.get('http://other.host/abs', () =>
+        HttpResponse.json({ data: { type: 't', id: '1' } }, { status: 200 }),
+      ),
+    );
+    const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
+    const r = await client.safeRequest({ method: 'GET', url: 'http://other.host/abs' });
+    expect(r.ok).toBe(true);
+  });
+
+  it('safeRequest defaults method GET and url /', async () => {
+    server.use(
+      http.get('http://localhost/api/v1/', () =>
+        HttpResponse.json({ data: { type: 't', id: '1' } }, { status: 200 }),
+      ),
+    );
+    const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
+    const r = await client.safeRequest({});
+    expect(r.ok).toBe(true);
+  });
+
   it('safeDelete Err on 403', async () => {
     server.use(
       http.delete('http://localhost/api/v1/d', () =>
