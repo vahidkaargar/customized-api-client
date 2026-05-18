@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-18
+
 ### Added
 
 - `retry.retryMutationsOnServerError` — opt-in automatic retries for **HTTP 5xx** on POST/PUT/PATCH/DELETE (same request config, so same `Idempotency-Key` and body); `Retry-After` honored the same as for reads
 - `isRetryablePerPolicy(error, { retryMutationsOnServerError })` optional second argument so UI hints match client retry settings
+
+### Fixed
+
+- CI: markdownlint **MD024** scoped to sibling headings only so Keep a Changelog’s repeated `### Added` / `### Changed` blocks stay valid
 
 ## [0.2.3] - 2026-05-16
 
@@ -37,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/vahidkaargar/customized-api-client/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/vahidkaargar/customized-api-client/releases/tag/v0.2.2
