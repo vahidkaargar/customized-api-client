@@ -20,6 +20,7 @@ export { DEFAULT_PAGE_SIZE_CAP, DEFAULT_TIMEOUT_MS } from './types/config.ts';
 export type {
   AcceptedBody,
   ClientSuccess,
+  ClientSuccessWithDocument,
   JsonApiSuccessBody,
   MultiStatusBody,
   MultiStatusItem,
@@ -40,9 +41,14 @@ export type {
 export { ApiClientError, isApiClientError } from './types/api-client-error.ts';
 
 export {
+  hasErrorCode,
+  isApiClientErrorWithCode,
   isAuthenticationError,
   isConflictError,
   isForbiddenError,
+  isIdempotencyKeyRequiredError,
+  isIfMatchRequiredError,
+  isMfaVerificationRequiredError,
   isPayloadTooLargeError,
   isPreconditionFailedError,
   isPreconditionRequiredError,

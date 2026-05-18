@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `hasErrorCode`, `isApiClientErrorWithCode`, `isIdempotencyKeyRequiredError`, `isIfMatchRequiredError`, `isMfaVerificationRequiredError` — disambiguate HTTP **428** by `errors[].code`
+- `postFormData` on `ApiClient` for multipart uploads
+- `ClientSuccessWithDocument<T>` and optional verb generics for typed JSON:API documents
+- README: multipart / FormData upload recipe
+
+### Fixed
+
+- `applyJsonApiHeaders` no longer sets JSON:API `Content-Type` for `FormData`, binary bodies, and other non-JSON payloads
+
 ## [0.2.4] - 2026-05-18
 
 ### Added

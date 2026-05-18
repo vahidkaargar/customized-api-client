@@ -18,7 +18,8 @@ import { formatIfMatch } from './headers/if-match.ts';
 import { resolveResourcePath } from './headers/resolve-url.ts';
 import { dispatchWithRetry } from './retry/execute-with-retry.ts';
 import { normalizeAxiosResponse } from './http/normalize-response.ts';
-import type { ClientSuccess } from './types/results.ts';
+import type { JsonApiDocument } from './types/jsonapi.ts';
+import type { ClientSuccess, ClientSuccessWithDocument } from './types/results.ts';
 import type { Result } from './types/results.ts';
 import { ApiClientError } from './types/api-client-error.ts';
 import { flattenAxiosHeaders } from './http/header-utils.ts';
@@ -31,64 +32,93 @@ export interface RequestCallOptions {
 }
 
 export interface ApiClient {
-  readonly get: (path: string, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly head: (path: string, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly post: (path: string, data?: unknown, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly patch: (path: string, data?: unknown, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly put: (path: string, data?: unknown, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly delete: (path: string, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly request: (
+  readonly get: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly head: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly post: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data?: unknown,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly patch: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data?: unknown,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly put: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data?: unknown,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly delete: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly postFormData: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data: FormData,
+    opts?: RequestCallOptions,
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly request: <T extends JsonApiDocument = JsonApiDocument>(
     ax: AxiosRequestConfig,
     opts?: RequestCallOptions,
-  ) => Promise<ClientSuccess>;
-  readonly getByUrl: (fullUrl: string, opts?: RequestCallOptions) => Promise<ClientSuccess>;
-  readonly patchWithVersion: (
-    path: string,
-    data: unknown,
-    version: number,
-    opts?: Omit<RequestCallOptions, 'ifMatchVersion'>,
-  ) => Promise<ClientSuccess>;
-  readonly safeGet: (
-    path: string,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safePost: (
-    path: string,
-    data?: unknown,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safePatch: (
-    path: string,
-    data?: unknown,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safePut: (
-    path: string,
-    data?: unknown,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safeDelete: (
-    path: string,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safeHead: (
-    path: string,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safeRequest: (
-    ax: AxiosRequestConfig,
-    opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safeGetByUrl: (
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly getByUrl: <T extends JsonApiDocument = JsonApiDocument>(
     fullUrl: string,
     opts?: RequestCallOptions,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
-  readonly safePatchWithVersion: (
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly patchWithVersion: <T extends JsonApiDocument = JsonApiDocument>(
     path: string,
     data: unknown,
     version: number,
     opts?: Omit<RequestCallOptions, 'ifMatchVersion'>,
-  ) => Promise<Result<ClientSuccess, ApiClientError>>;
+  ) => Promise<ClientSuccessWithDocument<T>>;
+  readonly safeGet: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safePost: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data?: unknown,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safePatch: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data?: unknown,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safePut: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data?: unknown,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safeDelete: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safeHead: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safeRequest: <T extends JsonApiDocument = JsonApiDocument>(
+    ax: AxiosRequestConfig,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safeGetByUrl: <T extends JsonApiDocument = JsonApiDocument>(
+    fullUrl: string,
+    opts?: RequestCallOptions,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
+  readonly safePatchWithVersion: <T extends JsonApiDocument = JsonApiDocument>(
+    path: string,
+    data: unknown,
+    version: number,
+    opts?: Omit<RequestCallOptions, 'ifMatchVersion'>,
+  ) => Promise<Result<ClientSuccessWithDocument<T>, ApiClientError>>;
 }
 
 function readHeader(ax: AxiosRequestConfig, name: string): string | undefined {
@@ -265,7 +295,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     }
   }
 
-  const client: ApiClient = {
+  const client = {
     async get(path: string, opts?: RequestCallOptions): Promise<ClientSuccess> {
       return perform('GET', resolvePath(path), opts ?? {});
     },
@@ -273,6 +303,13 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       return perform('HEAD', resolvePath(path), opts ?? {});
     },
     async post(path: string, data?: unknown, opts?: RequestCallOptions): Promise<ClientSuccess> {
+      return perform('POST', resolvePath(path), { ...opts, data });
+    },
+    async postFormData(
+      path: string,
+      data: FormData,
+      opts?: RequestCallOptions,
+    ): Promise<ClientSuccess> {
       return perform('POST', resolvePath(path), { ...opts, data });
     },
     async patch(path: string, data?: unknown, opts?: RequestCallOptions): Promise<ClientSuccess> {
@@ -314,17 +351,48 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
         ifMatchVersion: version,
       });
     },
-    safeGet: (path, opts) => safe(() => client.get(path, opts)),
-    safePost: (path, data, opts) => safe(() => client.post(path, data, opts)),
-    safePatch: (path, data, opts) => safe(() => client.patch(path, data, opts)),
-    safePut: (path, data, opts) => safe(() => client.put(path, data, opts)),
-    safeDelete: (path, opts) => safe(() => client.delete(path, opts)),
-    safeHead: (path, opts) => safe(() => client.head(path, opts)),
-    safeRequest: (ax, opts) => safe(() => client.request(ax, opts)),
-    safeGetByUrl: (url, opts) => safe(() => client.getByUrl(url, opts)),
-    safePatchWithVersion: (path, data, version, opts) =>
-      safe(() => client.patchWithVersion(path, data, version, opts)),
+    safeGet: (path: string, opts?: RequestCallOptions) =>
+      safe(() => perform('GET', resolvePath(path), opts ?? {})),
+    safePost: (path: string, data?: unknown, opts?: RequestCallOptions) =>
+      safe(() => perform('POST', resolvePath(path), { ...opts, data })),
+    safePatch: (path: string, data?: unknown, opts?: RequestCallOptions) =>
+      safe(() => perform('PATCH', resolvePath(path), { ...opts, data })),
+    safePut: (path: string, data?: unknown, opts?: RequestCallOptions) =>
+      safe(() => perform('PUT', resolvePath(path), { ...opts, data })),
+    safeDelete: (path: string, opts?: RequestCallOptions) =>
+      safe(() => perform('DELETE', resolvePath(path), opts ?? {})),
+    safeHead: (path: string, opts?: RequestCallOptions) =>
+      safe(() => perform('HEAD', resolvePath(path), opts ?? {})),
+    safeRequest: (ax: AxiosRequestConfig, opts?: RequestCallOptions) =>
+      safe(() => {
+        const method = (ax.method ?? 'GET').toUpperCase();
+        const rawUrl = ax.url ?? '/';
+        const u =
+          typeof rawUrl === 'string' && /^https?:\/\//i.test(rawUrl)
+            ? rawUrl
+            : resolvePath(rawUrl);
+        return perform(method, u, {
+          ...opts,
+          data: ax.data,
+          idempotencyKey: opts?.idempotencyKey ?? readHeader(ax, 'Idempotency-Key'),
+        });
+      }),
+    safeGetByUrl: (fullUrl: string, opts?: RequestCallOptions) =>
+      safe(() => perform('GET', fullUrl, opts ?? {})),
+    safePatchWithVersion: (
+      path: string,
+      data: unknown,
+      version: number,
+      opts?: Omit<RequestCallOptions, 'ifMatchVersion'>,
+    ) =>
+      safe(() =>
+        perform('PATCH', resolvePath(path), {
+          ...opts,
+          data,
+          ifMatchVersion: version,
+        }),
+      ),
   };
 
-  return client;
+  return client as ApiClient;
 }

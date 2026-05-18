@@ -125,8 +125,8 @@ describe('coverage 100% gaps', () => {
   });
 
   it('safe* rethrows non-ApiClientError', async () => {
+    vi.spyOn(retryModule, 'dispatchWithRetry').mockRejectedValueOnce(new Error('not api'));
     const client = createApiClient({ baseURL: 'http://localhost/api/v1' });
-    vi.spyOn(client, 'get').mockRejectedValueOnce(new Error('not api'));
     await expect(client.safeGet('/x')).rejects.toThrow('not api');
   });
 

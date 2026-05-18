@@ -187,6 +187,19 @@ setTimeout(() => controller.abort(), 5_000);
 await promise; // throws when aborted
 ```
 
+### Non-JSON:API bodies (multipart)
+
+For file uploads, send `FormData` — the client keeps `Accept: application/vnd.api+json`, omits JSON:API `Content-Type` (Axios sets the multipart boundary), and still sends `Idempotency-Key` on POST.
+
+```typescript
+const fd = new FormData();
+fd.append('file', file, file.name);
+
+await client.request({ method: 'POST', url: '/media', data: fd });
+// or:
+await client.postFormData('/media', fd);
+```
+
 ### Poll an async job (202)
 
 ```typescript
@@ -302,7 +315,11 @@ Synthetic codes when the body is missing or invalid: `EMPTY_ERROR_BODY`, `INVALI
 | `isAuthenticationError` | 401 |
 | `isForbiddenError` | 403 |
 | `isValidationError` | 422 |
-| `isPreconditionRequiredError` | 428 |
+| `isPreconditionRequiredError` | any **428** |
+| `isIdempotencyKeyRequiredError` | **428** + `IDEMPOTENCY_KEY_REQUIRED` |
+| `isIfMatchRequiredError` | **428** + `IF_MATCH_REQUIRED` |
+| `isMfaVerificationRequiredError` | **428** + `MFA_VERIFICATION_REQUIRED` |
+| `hasErrorCode` / `isApiClientErrorWithCode` | matching `errors[].code` |
 | `isPreconditionFailedError` | 412 |
 | `isConflictError` | 409 |
 | `isPayloadTooLargeError` | 413 |
@@ -439,13 +456,19 @@ This package ships **generic JSON:API types**, not endpoint-specific OpenAPI typ
 3. Use generics at call sites:
 
 ```typescript
+import type { JsonApiDocument, JsonApiResourceObject } from '@vahidkaargar/customized-api-client';
 import type { operations } from '@myorg/api-types';
 
-type MeResponse = operations['getMe']['responses'][200]['content']['application/vnd.api+json'];
-const me = await client.get<MeResponse>('/me');
+type MeDoc = JsonApiDocument<JsonApiResourceObject>;
+// Or from OpenAPI: operations['getMe']['responses'][200]['content']['application/vnd.api+json']
+
+const res = await client.get<MeDoc>('/me');
+if (res.kind === 'jsonapi-success') {
+  const me = res.document.data; // document typed as MeDoc
+}
 ```
 
-String paths and manual types work without OpenAPI.
+The generic narrows `document` on **`jsonapi-success`**; `accepted`, `no-content`, and `multi-status` shapes are unchanged. String paths and manual types work without OpenAPI.
 
 ---
 

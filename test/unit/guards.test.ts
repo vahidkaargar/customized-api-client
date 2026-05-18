@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ApiClientError } from '../../src/index.ts';
 import {
+  hasErrorCode,
+  isApiClientErrorWithCode,
   isAuthenticationError,
   isConflictError,
   isForbiddenError,
+  isIdempotencyKeyRequiredError,
+  isIfMatchRequiredError,
+  isMfaVerificationRequiredError,
   isPayloadTooLargeError,
   isPreconditionFailedError,
   isPreconditionRequiredError,
@@ -23,6 +28,52 @@ describe('guards', () => {
 
   it('isPreconditionRequiredError', () => {
     expect(isPreconditionRequiredError(new ApiClientError(428, [{ code: 'X' }]))).toBe(true);
+    expect(
+      isPreconditionRequiredError(
+        new ApiClientError(428, [{ code: 'IDEMPOTENCY_KEY_REQUIRED' }], 'IDEMPOTENCY_KEY_REQUIRED'),
+      ),
+    ).toBe(true);
+    expect(isPreconditionRequiredError(new ApiClientError(422, [{ code: 'X' }]))).toBe(false);
+  });
+
+  it('hasErrorCode and isApiClientErrorWithCode', () => {
+    const err = new ApiClientError(422, [{ code: 'A' }, { code: 'B' }], 'A');
+    expect(hasErrorCode(err, 'B')).toBe(true);
+    expect(hasErrorCode(err, 'Z')).toBe(false);
+    expect(hasErrorCode(new Error('x'), 'A')).toBe(false);
+    expect(isApiClientErrorWithCode(err, 'B')).toBe(true);
+    if (isApiClientErrorWithCode(err, 'B')) {
+      expect(err.status).toBe(422);
+    }
+  });
+
+  it('428 code-specific guards', () => {
+    const idem = new ApiClientError(
+      428,
+      [{ code: 'IDEMPOTENCY_KEY_REQUIRED' }],
+      'IDEMPOTENCY_KEY_REQUIRED',
+    );
+    expect(isIdempotencyKeyRequiredError(idem)).toBe(true);
+    expect(isIfMatchRequiredError(idem)).toBe(false);
+    expect(isMfaVerificationRequiredError(idem)).toBe(false);
+    expect(isPreconditionRequiredError(idem)).toBe(true);
+
+    const ifMatch = new ApiClientError(428, [{ code: 'IF_MATCH_REQUIRED' }], 'IF_MATCH_REQUIRED');
+    expect(isIfMatchRequiredError(ifMatch)).toBe(true);
+    expect(isIdempotencyKeyRequiredError(ifMatch)).toBe(false);
+
+    const mfa = new ApiClientError(
+      428,
+      [{ code: 'MFA_VERIFICATION_REQUIRED' }],
+      'MFA_VERIFICATION_REQUIRED',
+    );
+    expect(isMfaVerificationRequiredError(mfa)).toBe(true);
+
+    expect(isIdempotencyKeyRequiredError(new ApiClientError(422, [{ code: 'IDEMPOTENCY_KEY_REQUIRED' }]))).toBe(
+      false,
+    );
+    expect(isIdempotencyKeyRequiredError(new ApiClientError(428, [{ code: 'OTHER' }]))).toBe(false);
+    expect(isIdempotencyKeyRequiredError(new Error('x'))).toBe(false);
   });
 
   it('isPreconditionFailedError', () => {
