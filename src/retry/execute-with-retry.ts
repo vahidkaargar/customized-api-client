@@ -46,6 +46,7 @@ export async function dispatchWithRetry<TData = unknown>(
         status,
         primaryErrorCode: primary,
         isNetworkError: false,
+        retryMutationsOnServerError: options.retry?.retryMutationsOnServerError,
       });
       if (allowed && attempt < max - 1) {
         const retryAfter = parseRetryAfterSeconds(flat['retry-after']);
@@ -66,6 +67,7 @@ export async function dispatchWithRetry<TData = unknown>(
       const allowed = retryAllowed({
         method: String(config.method ?? 'GET'),
         isNetworkError: isNet,
+        retryMutationsOnServerError: options.retry?.retryMutationsOnServerError,
       });
       if (!allowed || attempt >= max - 1) {
         throw err;

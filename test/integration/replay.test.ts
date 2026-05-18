@@ -30,6 +30,7 @@ describe('Idempotent-Replayed', () => {
     expect(r2.kind).toBe('jsonapi-success');
     if (r1.kind === 'jsonapi-success' && r2.kind === 'jsonapi-success') {
       expect(r2.document).toEqual(r1.document);
+      expect(r2.headers.idempotentReplayed).toBe(true);
     }
     expect(onIdempotencyReplay).toHaveBeenCalled();
   });

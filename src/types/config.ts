@@ -18,6 +18,11 @@ export interface RetryOptions {
   readonly baseDelayMs?: number;
   readonly maxDelayMs?: number;
   readonly jitterRatio?: number;
+  /**
+   * When true, POST/PUT/PATCH/DELETE responses in the **5xx** range are retried like GET/HEAD
+   * (same `AxiosRequestConfig`, so same `Idempotency-Key` and body). Default false.
+   */
+  readonly retryMutationsOnServerError?: boolean;
 }
 
 export interface IdempotencyReplayContext {
