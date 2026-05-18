@@ -29,13 +29,17 @@ export function isPayloadTooLargeError(e: unknown): boolean {
   return isApiErr(e, 413);
 }
 
-export function isRetryablePerPolicy(e: unknown): boolean {
+export function isRetryablePerPolicy(
+  e: unknown,
+  policy?: Readonly<{ retryMutationsOnServerError?: boolean }>,
+): boolean {
   if (!(e instanceof ApiClientError)) return false;
   return retryAllowed({
     method: e.requestMethod ?? 'GET',
     status: e.status,
     primaryErrorCode: e.primaryCode,
     isNetworkError: false,
+    retryMutationsOnServerError: policy?.retryMutationsOnServerError,
   });
 }
 

@@ -18,7 +18,7 @@ TypeScript **Axios** client for **JSON:API v1.1** APIs — Bearer auth, mandator
 - **Errors** — `ApiClientError` with `status`, `primaryCode`, `errors[]`, safe `toJSON()` for logs
 - **Idempotency** — `Idempotency-Key` on POST/PATCH/PUT/DELETE (ULID by default)
 - **Concurrency** — `If-Match: "v=<n>"` via `patchWithVersion` or `ifMatchVersion`
-- **Retries** — explicit policy (safe GET/HEAD vs mutations); honors `Retry-After`
+- **Retries** — explicit policy (safe GET/HEAD vs mutations); honors `Retry-After`; optional mutation **5xx** retries
 - **Two ergonomics** — throwing verbs **or** `safe*` methods returning `{ ok, value \| error }`
 - **Cancellation** — optional `AbortSignal` per request
 
@@ -306,14 +306,15 @@ Synthetic codes when the body is missing or invalid: `EMPTY_ERROR_BODY`, `INVALI
 | `isPreconditionFailedError` | 412 |
 | `isConflictError` | 409 |
 | `isPayloadTooLargeError` | 413 |
-| `isRetryablePerPolicy` | Would retry per client policy (UI hints) |
+| `isRetryablePerPolicy` | Would retry per client policy (UI hints); pass `{ retryMutationsOnServerError: true }` to match clients that opt into mutation **5xx** retries |
 
 ---
 
 ## Idempotency
 
 - **POST, PATCH, PUT, DELETE** send **`Idempotency-Key`** (ULID per request by default).
-- Retries reuse the **same key and body**.
+- Retries reuse the **same key and body** within one client call (`dispatchWithRetry`).
+- For **separate** `post`/`patch`/… invocations, pass the same `idempotencyKey` yourself if they represent the same user intent.
 - Server replay → header `Idempotent-Replayed: true` → `headers.idempotentReplayed` + optional `onIdempotencyReplay`.
 - **GET / HEAD** never send idempotency keys.
 
@@ -341,17 +342,20 @@ Read version with `readResourceVersion(resource, etag)` — prefers `meta.versio
 | `baseDelayMs` | `200` |
 | `maxDelayMs` | `10000` |
 | `jitterRatio` | `0.2` |
+| `retryMutationsOnServerError` | `false` |
 
 | Situation | Retried? |
 |-----------|----------|
 | Network error (no response) | Yes |
 | GET/HEAD **408, 429, 5xx** | Yes |
 | GET/HEAD **401, 403, 412, 428**, validation 4xx | No |
-| Mutations **5xx / 429** | No |
+| Mutations **5xx / 429** | No (set `retry: { retryMutationsOnServerError: true }` to retry **5xx** only; **429** stays off) |
 | Mutation **409** `IDEMPOTENCY_REQUEST_IN_PROGRESS` | Yes |
 | **409** `IDEMPOTENCY_KEY_REUSED` | No |
 
-Disable: `retry: { maxAttempts: 1 }`. Inspect logic: `retryAllowed({ … })`.
+When `retryMutationsOnServerError` is **true**, POST/PUT/PATCH/DELETE responses with status **500–599** use the same backoff and `Retry-After` handling as reads, with the **same** request config (so the same `Idempotency-Key` and body). Use this when your server does **not** persist a replay body for **5xx** and allows the handler to run again for the same key.
+
+Disable: `retry: { maxAttempts: 1 }`. Inspect logic: `retryAllowed({ … })` (include `retryMutationsOnServerError` when mirroring client config). For thrown errors: `isRetryablePerPolicy(err, { retryMutationsOnServerError: true })`.
 
 ---
 

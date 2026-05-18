@@ -4,6 +4,8 @@ export interface RetryPolicyContext {
   /** First JSON:API error `code` when present */
   readonly primaryErrorCode?: string;
   readonly isNetworkError: boolean;
+  /** When true, mutations retry on HTTP 5xx (after idempotency 409 rules). */
+  readonly retryMutationsOnServerError?: boolean;
 }
 
 /** Pure policy per [.cursor/tasks/project-plan.md §7](../tasks/project-plan.md). */
@@ -28,6 +30,9 @@ export function retryAllowed(ctx: RetryPolicyContext): boolean {
   }
 
   if (!isRead) {
+    if (ctx.retryMutationsOnServerError === true && s >= 500 && s < 600) {
+      return true;
+    }
     return false;
   }
 

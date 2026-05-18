@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `retry.retryMutationsOnServerError` — opt-in automatic retries for **HTTP 5xx** on POST/PUT/PATCH/DELETE (same request config, so same `Idempotency-Key` and body); `Retry-After` honored the same as for reads
+- `isRetryablePerPolicy(error, { retryMutationsOnServerError })` optional second argument so UI hints match client retry settings
+
 ## [0.2.3] - 2026-05-16
 
 ### Added

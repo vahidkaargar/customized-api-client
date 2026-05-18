@@ -48,6 +48,16 @@ describe('guards', () => {
     expect(
       isRetryablePerPolicy(new ApiClientError(500, [{ code: 'X' }], 'X', {}, undefined, 'POST')),
     ).toBe(false);
+    expect(
+      isRetryablePerPolicy(new ApiClientError(500, [{ code: 'X' }], 'X', {}, undefined, 'POST'), {
+        retryMutationsOnServerError: true,
+      }),
+    ).toBe(true);
     expect(isRetryablePerPolicy(new ApiClientError(401, [{ code: 'X' }]))).toBe(false);
+    expect(
+      isRetryablePerPolicy(new ApiClientError(401, [{ code: 'X' }]), {
+        retryMutationsOnServerError: true,
+      }),
+    ).toBe(false);
   });
 });
