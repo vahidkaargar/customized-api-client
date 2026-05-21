@@ -30,11 +30,37 @@ export interface IdempotencyReplayContext {
   readonly method?: string;
 }
 
+export interface LocaleMismatchContext {
+  /** Locale from `getLocale` before default omission. */
+  readonly requested?: string;
+  /** `Content-Language` from the response. */
+  readonly resolved: string;
+  readonly url?: string;
+  readonly method?: string;
+}
+
+export interface LocaleClientOptions {
+  readonly getLocale?: () =>
+    | string
+    | null
+    | undefined
+    | Promise<string | null | undefined>;
+  /**
+   * When the resolved locale matches this value (primary subtag), `Accept-Language` is omitted.
+   */
+  readonly defaultLocale?: string;
+  readonly onLocaleMismatch?: 'warn' | ((ctx: Readonly<LocaleMismatchContext>) => void);
+}
+
 export interface ApiClientConfig {
   readonly baseURL: string;
   /** Default Mode B — see `BaseUrlMode`. */
   readonly baseUrlMode?: BaseUrlMode;
   readonly auth?: AuthConfig;
+  readonly locale?: LocaleClientOptions;
+  /**
+   * @deprecated Use `locale.getLocale` instead.
+   */
   readonly getAcceptLanguage?: () => string | null | undefined | Promise<string | null | undefined>;
   readonly defaultHeaders?: Readonly<Record<string, string>>;
   readonly timeout?: number;

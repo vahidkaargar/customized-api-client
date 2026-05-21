@@ -2,13 +2,19 @@ import axios, {
   type AxiosInstance,
   type AxiosRequestConfig,
   type AxiosResponse,
+  type InternalAxiosRequestConfig,
   isAxiosError,
 } from 'axios';
 import type { ApiClientConfig, BaseUrlMode } from './types/config.ts';
 import { DEFAULT_TIMEOUT_MS } from './types/config.ts';
 import { applyJsonApiHeaders } from './headers/jsonapi-headers.ts';
 import { resolveAuthorizationHeader } from './headers/auth.ts';
-import { resolveAcceptLanguage } from './headers/locale.ts';
+import {
+  acceptLanguageForRequest,
+  notifyLocaleMismatch,
+  readResponseContentLanguage,
+  resolveRequestLocale,
+} from './headers/locale.ts';
 import {
   assertValidIdempotencyKey,
   defaultIdempotencyKey,
@@ -177,6 +183,8 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
   const genKey = config.generateIdempotencyKey ?? defaultIdempotencyKey;
   warnInsecureBaseUrl(config.baseURL);
 
+  const localeByRequest = new WeakMap<InternalAxiosRequestConfig, string | undefined>();
+
   const instance: AxiosInstance = axios.create({
     baseURL: config.baseURL,
     timeout: config.timeout ?? DEFAULT_TIMEOUT_MS,
@@ -195,9 +203,15 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     if (authHeader) {
       (next.headers as Record<string, string>).Authorization = authHeader;
     }
-    const lang = await resolveAcceptLanguage(config.getAcceptLanguage);
-    if (lang) {
-      (next.headers as Record<string, string>)['Accept-Language'] = lang;
+    const resolved = await resolveRequestLocale(
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy `getAcceptLanguage` fallback
+      config.getAcceptLanguage,
+      config.locale,
+    );
+    localeByRequest.set(next, resolved);
+    const toSend = acceptLanguageForRequest(resolved, config.locale?.defaultLocale);
+    if (toSend) {
+      (next.headers as Record<string, string>)['Accept-Language'] = toSend;
     }
     if (isMutationMethod(method)) {
       const h = next.headers as Record<string, string | undefined>;
@@ -223,6 +237,17 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       const dep = parseDeprecationHeaders(res.headers);
       if (dep && config.onDeprecated) {
         config.onDeprecated(dep);
+      }
+      const contentLang = readResponseContentLanguage(flat);
+      if (contentLang) {
+        notifyLocaleMismatch(config.locale, {
+          requested: localeByRequest.get(res.config),
+          resolved: contentLang,
+          /* v8 ignore start -- @preserve axios config url/method are strings */
+          url: typeof res.config.url === 'string' ? res.config.url : undefined,
+          method: typeof res.config.method === 'string' ? res.config.method : undefined,
+          /* v8 ignore stop -- @preserve */
+        });
       }
       return res;
     },

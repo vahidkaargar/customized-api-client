@@ -229,7 +229,8 @@ Client-level options for `createApiClient({ … })`:
 | `defaultHeaders` | — | Merged into every request |
 | `retry` | see [Retries](#retries) | `maxAttempts`, backoff, jitter |
 | `generateIdempotencyKey` | ULID | Factory for mutation keys |
-| `getAcceptLanguage` | — | Sets `Accept-Language` when non-empty |
+| `locale` | — | `getLocale`, `defaultLocale`, `onLocaleMismatch` — see [Locale](#locale-accept-language--content-language) |
+| `getAcceptLanguage` | — | **Deprecated** — use `locale.getLocale`; sets `Accept-Language` when non-empty |
 | `onIdempotencyReplay` | — | Fired when `Idempotent-Replayed: true` |
 | `onUnauthorized` | — | Fired on normalized **401** |
 | `onDeprecated` | — | Deprecation / sunset headers |
@@ -246,6 +247,30 @@ auth: { type: 'partner-bearer', getSecret: () => process.env.PARTNER_SECRET }
 ```
 
 If `getToken` / `getSecret` returns `null` or `undefined`, no `Authorization` header is sent.
+
+### Locale (Accept-Language / Content-Language)
+
+Configure locale once on the client (e.g. for backends with `SetLocaleMiddleware`). This package only sets HTTP headers and optional mismatch reporting — not vue-i18n, `GET /locales`, or `GET /translations`.
+
+```typescript
+const client = createApiClient({
+  baseURL: 'https://api.example.com/api/v1',
+  locale: {
+    getLocale: () => getStoredLocale(), // 'en' | 'fr' | 'fa'
+    defaultLocale: 'en', // omit Accept-Language when UI locale is English (server default)
+    onLocaleMismatch: import.meta.env.DEV ? 'warn' : undefined,
+  },
+});
+```
+
+| Behavior | Detail |
+|----------|--------|
+| **Accept-Language** | From `locale.getLocale()` on every request via this client |
+| **Omit for default** | When resolved locale matches `defaultLocale` (primary subtag), header is not sent |
+| **Content-Language** | Exposed on success as `res.headers.contentLanguage` |
+| **Mismatch** | If response `Content-Language` differs from requested locale (base tag: `fr` vs `fr-FR` match), `'warn'` or your callback runs — UI locale is never changed |
+
+Legacy `getAcceptLanguage` still works; `locale.getLocale` takes precedence when both are set.
 
 ---
 
