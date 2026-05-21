@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-21
+
+### Added
+
+- `locale` on `ApiClientConfig` — `getLocale`, `defaultLocale` (omit `Accept-Language` when resolved locale matches), `onLocaleMismatch` (`'warn'` or callback)
+- Locale helpers: `normalizeLocaleCode`, `parseContentLanguage`, `localesMatch`, `acceptLanguageForRequest`, `resolveRequestLocale`, `readResponseContentLanguage`, `notifyLocaleMismatch`
+- Optional `Content-Language` mismatch reporting (primary subtag comparison; does not change consumer locale)
+- README: **Locale (Accept-Language / Content-Language)** section
+
+### Changed
+
+- `getAcceptLanguage` is deprecated in favor of `locale.getLocale` (still supported)
+
 ## [0.3.0] - 2026-05-18
 
 ### Added

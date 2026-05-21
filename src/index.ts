@@ -11,6 +11,8 @@ export type {
   BaseUrlMode,
   DeprecationInfo,
   IdempotencyReplayContext,
+  LocaleClientOptions,
+  LocaleMismatchContext,
   RetryOptions,
   TokenProvider,
   TransformResponseKeysMode,
@@ -66,7 +68,18 @@ export {
   isMutationMethod,
 } from './headers/idempotency.ts';
 export { formatIfMatch } from './headers/if-match.ts';
-export { resolveAcceptLanguage } from './headers/locale.ts';
+export {
+  acceptLanguageForRequest,
+  localesMatch,
+  normalizeLocaleCode,
+  notifyLocaleMismatch,
+  parseContentLanguage,
+  readResponseContentLanguage,
+  resolveAcceptLanguage,
+  resolveLocaleProvider,
+  resolveRequestLocale,
+} from './headers/locale.ts';
+export type { LocaleProvider } from './headers/locale.ts';
 export { resolveAuthorizationHeader } from './headers/auth.ts';
 export { resolveResourcePath, normalizeHttpUrl } from './headers/resolve-url.ts';
 
