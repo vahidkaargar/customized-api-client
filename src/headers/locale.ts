@@ -22,7 +22,7 @@ export function parseContentLanguage(header: string | undefined): string | undef
   const first = header.split(',')[0]?.trim();
   if (!first) return undefined;
   const tag = first.split(';')[0]?.trim();
-  return tag || undefined;
+  return tag && tag.length > 0 ? tag : undefined;
 }
 
 /** Compare primary subtags (e.g. `fr-FR` and `fr` match). */
@@ -68,7 +68,7 @@ export async function resolveAcceptLanguage(
   if (!provider) return undefined;
   const v = await provider();
   if (v === null || v === undefined) return undefined;
-  const trimmed = String(v).trim();
+  const trimmed = v.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
