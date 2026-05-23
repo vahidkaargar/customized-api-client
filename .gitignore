@@ -20,3 +20,7 @@ graphify-out/
 .env.*
 !.env.example
 .DS_Store
+
+# Ephemeral Mriya PWA migration mirror (generated; see customized-api-client history if revived)
+/_mriya_delivery/
+/tools/gen-mriya-idempotency-mirror.mjs
