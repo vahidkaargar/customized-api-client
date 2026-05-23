@@ -48,7 +48,9 @@ export {
   isAuthenticationError,
   isConflictError,
   isForbiddenError,
+  isIdempotencyInProgressError,
   isIdempotencyKeyRequiredError,
+  isIdempotencyKeyReusedError,
   isIfMatchRequiredError,
   isMfaVerificationRequiredError,
   isPayloadTooLargeError,
@@ -67,6 +69,15 @@ export {
   IDEMPOTENCY_MAX_LENGTH,
   isMutationMethod,
 } from './headers/idempotency.ts';
+export { createIdempotencyIntent } from './idempotency/intent.ts';
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- published compat alias
+export { createMutationIdempotency } from './idempotency/intent.ts';
+export type {
+  CreateIdempotencyIntentOptions,
+  IdempotencyIntent,
+  IdempotencyRotation,
+} from './idempotency/intent.ts';
+export { idempotencyRotationForRetry } from './idempotency/rotation.ts';
 export { formatIfMatch } from './headers/if-match.ts';
 export {
   acceptLanguageForRequest,

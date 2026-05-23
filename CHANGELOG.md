@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-23
+
+### Added
+
+- **`createIdempotencyIntent()`** — framework-agnostic mutation key lifecycle (`begin`, `keyFor('reuse'|'rotate')`, `complete`, `abandon`) for reuse across separate client calls
+- **`idempotencyRotationForRetry(error)`** — suggested `'reuse'` vs `'rotate'` from network/idempotency/validation errors
+- **`isIdempotencyKeyReusedError`**, **`isIdempotencyInProgressError`** — **409** guards matching OpenAPI idempotency codes
+- **`createMutationIdempotency`** — deprecated alias of `createIdempotencyIntent`
+- README: **Idempotency** split into transport vs intent, with app-layer recipe
+
 ## [0.4.0] - 2026-05-21
 
 ### Added

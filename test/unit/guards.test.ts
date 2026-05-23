@@ -6,7 +6,9 @@ import {
   isAuthenticationError,
   isConflictError,
   isForbiddenError,
+  isIdempotencyInProgressError,
   isIdempotencyKeyRequiredError,
+  isIdempotencyKeyReusedError,
   isIfMatchRequiredError,
   isMfaVerificationRequiredError,
   isPayloadTooLargeError,
@@ -86,6 +88,21 @@ describe('guards', () => {
 
   it('isConflictError', () => {
     expect(isConflictError(new ApiClientError(409, [{ code: 'X' }]))).toBe(true);
+  });
+
+  it('idempotency 409 code guards', () => {
+    expect(isIdempotencyKeyReusedError(new ApiClientError(
+      409,
+      [{ code: 'IDEMPOTENCY_KEY_REUSED' }],
+      'IDEMPOTENCY_KEY_REUSED',
+    ))).toBe(true);
+    expect(isIdempotencyInProgressError(new ApiClientError(
+      409,
+      [{ code: 'IDEMPOTENCY_REQUEST_IN_PROGRESS' }],
+      'IDEMPOTENCY_REQUEST_IN_PROGRESS',
+    ))).toBe(true);
+    expect(isIdempotencyKeyReusedError(new ApiClientError(409, [{ code: 'OTHER' }]))).toBe(false);
+    expect(isIdempotencyInProgressError(new Error('x'))).toBe(false);
   });
 
   it('isPayloadTooLargeError', () => {

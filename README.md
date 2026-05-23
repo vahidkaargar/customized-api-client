@@ -347,6 +347,8 @@ Synthetic codes when the body is missing or invalid: `EMPTY_ERROR_BODY`, `INVALI
 | `hasErrorCode` / `isApiClientErrorWithCode` | matching `errors[].code` |
 | `isPreconditionFailedError` | 412 |
 | `isConflictError` | 409 |
+| `isIdempotencyKeyReusedError` | **409** + `IDEMPOTENCY_KEY_REUSED` |
+| `isIdempotencyInProgressError` | **409** + `IDEMPOTENCY_REQUEST_IN_PROGRESS` |
 | `isPayloadTooLargeError` | 413 |
 | `isRetryablePerPolicy` | Would retry per client policy (UI hints); pass `{ retryMutationsOnServerError: true }` to match clients that opt into mutation **5xx** retries |
 
@@ -354,11 +356,45 @@ Synthetic codes when the body is missing or invalid: `EMPTY_ERROR_BODY`, `INVALI
 
 ## Idempotency
 
+### Transport (this client)
+
 - **POST, PATCH, PUT, DELETE** send **`Idempotency-Key`** (ULID per request by default).
-- Retries reuse the **same key and body** within one client call (`dispatchWithRetry`).
-- For **separate** `post`/`patch`/… invocations, pass the same `idempotencyKey` yourself if they represent the same user intent.
+- Retries **inside one** `client.post()` / `patch()` / … reuse the **same key and body** (`dispatchWithRetry`).
 - Server replay → header `Idempotent-Replayed: true` → `headers.idempotentReplayed` + optional `onIdempotencyReplay`.
 - **GET / HEAD** never send idempotency keys.
+
+### Intent (your app)
+
+Separate user actions (Save, Retry button, confirm dialog) are **separate client calls**. Reuse the same key only when retrying the **same intent** after abort/network/`IDEMPOTENCY_REQUEST_IN_PROGRESS`; rotate after validation fixes or conflicting payload.
+
+```typescript
+import {
+  createApiClient,
+  createIdempotencyIntent,
+  idempotencyRotationForRetry,
+} from '@vahidkaargar/customized-api-client';
+
+const client = createApiClient({ baseURL: '…' });
+const intent = createIdempotencyIntent();
+
+async function save(rotation: 'reuse' | 'rotate' = 'rotate') {
+  await client.patch('/widgets/42', payload, {
+    idempotencyKey: intent.keyFor(rotation),
+  });
+  intent.complete();
+}
+
+// UI Retry after network → save('reuse')
+// Next Save after 422 → save('rotate') or save(idempotencyRotationForRetry(lastError))
+```
+
+| Helper | Role |
+|--------|------|
+| `createIdempotencyIntent()` | `begin` / `keyFor('reuse'\|'rotate')` / `complete` / `abandon` |
+| `idempotencyRotationForRetry(error)` | Suggested `'reuse'` vs `'rotate'` from an error |
+| `createMutationIdempotency` | Deprecated alias of `createIdempotencyIntent` |
+
+**412 If-Match** is not idempotency rotation — refresh `If-Match` version first, then retry with `'reuse'` if the payload is unchanged.
 
 ---
 

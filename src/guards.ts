@@ -47,6 +47,16 @@ export function isConflictError(e: unknown): boolean {
   return isApiErr(e, 409);
 }
 
+/** HTTP **409** + primary `errors[].code === 'IDEMPOTENCY_KEY_REUSED'`. */
+export function isIdempotencyKeyReusedError(e: unknown): boolean {
+  return isApiErrWithCode(e, 409, 'IDEMPOTENCY_KEY_REUSED');
+}
+
+/** HTTP **409** + primary `errors[].code === 'IDEMPOTENCY_REQUEST_IN_PROGRESS'`. */
+export function isIdempotencyInProgressError(e: unknown): boolean {
+  return isApiErrWithCode(e, 409, 'IDEMPOTENCY_REQUEST_IN_PROGRESS');
+}
+
 export function isPayloadTooLargeError(e: unknown): boolean {
   return isApiErr(e, 413);
 }
