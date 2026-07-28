@@ -43,7 +43,7 @@
     "@vitest/coverage-v8": "^4.1.6",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
-    "markdownlint-cli2": "^0.22.1",
+    "markdownlint-cli2": "^0.23.2",
     "msw": "^2.14.6",
     "prettier": "^3.8.3",
     "tsup": "^8.5.1",
